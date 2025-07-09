@@ -19,14 +19,22 @@ class Consumer {
     private LoopInterface $loop;
     private $checkForMessage = 2;
 
+    private SqsClient $sqsClient;
+    private string $queueUrl;
+
     public function __construct(
-        private SqsClient $sqsClient,
-        private string $queueUrl,
         $checkForMessage,
     ) {
+        $aws = config('consumer');
+        if (!$this->sqsClient) {
+            $this->sqsClient = new SqsClient($aws['sqs']);
+        }
+        $this->queueUrl = $aws['queue_url'];
         $this->loop = Loop::get();
         $this->checkForMessage = $checkForMessage;
     }
+
+
 
     protected function convertMessage($message): QueueMessage
     {

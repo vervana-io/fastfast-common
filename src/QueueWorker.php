@@ -4,6 +4,7 @@ namespace Fastfast\Common;
 
 class QueueWorker
 {
+
     public function __construct(private array $workers)
     {
     }

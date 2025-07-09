@@ -1,0 +1,33 @@
+{
+    "name": "fastfast/common",
+    "description": "fastfast common service functions and classes",
+    "type": "metapackage",
+    "require": {
+
+      "php": "^8.1",
+        "illuminate/support": "^10.10",
+        "react/event-loop": "^1.5",
+        "react/promise": "^3.2",
+        "symfony/property-access": "^7.3",
+        "aws/aws-sdk-php": "^3.349",
+        "illuminate/console": "^10.48"
+    },
+    "autoload": {
+        "psr-4": {
+            "Fastfast\\Common\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Akeeb Ismail",
+            "email": "ismailakeeb@gmail.com"
+        }
+    ],
+  "extra": {
+    "laravel": {
+      "providers": [
+        "FastFast\\Common\\ServiceProvider"
+      ]
+    }
+  }
+}

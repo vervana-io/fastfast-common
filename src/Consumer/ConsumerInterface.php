@@ -1,6 +1,6 @@
 <?php
 
-namespace Fastfast\Common\Consumer;
+namespace FastFast\Common\Consumer;
 
 interface ConsumerInterface {
     public function handle();

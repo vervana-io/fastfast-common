@@ -1,18 +1,18 @@
 <?php
 
-namespace Fastfast\Common\Consumer;
+namespace FastFast\Common\Consumer;
 
 use Aws\Sqs\Exception\SqsException;
 use Aws\Sqs\SqsClient;
 use Exception;
-use Fastfast\Common\Util\Accessor;
+use FastFastCommon\Util\Accessor;
 use Illuminate\Support\Collection;
 use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
-use Fastfast\Common\Consumer\Messages\QueueMessage;
+use FastFastCommon\Consumer\Messages\QueueMessage;
 
 class Consumer {
 

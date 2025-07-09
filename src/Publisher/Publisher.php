@@ -1,6 +1,6 @@
 <?php
 
-namespace Fastfast\Common\Publisher;
+namespace FastFast\Common\Publisher;
 
 use Aws\Sns\SnsClient;
 use Aws\Result;

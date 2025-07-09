@@ -1,6 +1,6 @@
 <?php
 
-namespace Fastfast\Common;
+namespace FastFast\Common;
 
 use Illuminate\Support\ServiceProvider;
 
@@ -19,7 +19,7 @@ class FastFastCommonProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
-                \Fastfast\Common\Console\StartWorker::class,
+                \FastFast\Common\Console\StartWorker::class,
             ]);
         }
     }
@@ -37,13 +37,13 @@ class FastFastCommonProvider extends ServiceProvider
             return new \Aws\Sns\SnsClient(config('consumer.sns'));
         });
 
-        $this->app->singleton(\Fastfast\Common\Publisher\Publisher::class, function ($app) {
-            return new \Fastfast\Common\Publisher\Publisher($app->make(\Aws\Sns\SnsClient::class));
+        $this->app->singleton(\FastFast\Common\Publisher\Publisher::class, function ($app) {
+            return new \FastFast\Common\Publisher\Publisher($app->make(\Aws\Sns\SnsClient::class));
         });
 
-        $this->app->singleton(\Fastfast\Common\Consumer\Consumer::class, function ($app) {
+        $this->app->singleton(\FastFast\Common\Consumer\Consumer::class, function ($app) {
             $checkForMessage = 2; // or get from config if needed
-            $consumer = new \Fastfast\Common\Consumer\Consumer($checkForMessage);
+            $consumer = new \FastFast\Common\Consumer\Consumer($checkForMessage);
             $consumer->logger = $app->make('log'); // inject Laravel logger
             return $consumer;
         });

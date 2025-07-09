@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use Aws\Sns\SnsClient;
-use Fastfast\Common\Publisher\Publisher;
+use FastFast\Common\Publisher\Publisher;
 use PHPUnit\Framework\TestCase;
 
 class PublisherTest extends TestCase

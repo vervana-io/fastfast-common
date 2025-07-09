@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use Aws\Sqs\SqsClient;
-use Fastfast\Common\Consumer\Consumer;
+use FastFast\Common\Consumer\Consumer;
 use PHPUnit\Framework\TestCase;
 
 class ConsumerTest extends TestCase

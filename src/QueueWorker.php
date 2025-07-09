@@ -1,6 +1,6 @@
 <?php
 
-namespace Fastfast\Common;
+namespace FastFast\Common;
 
 class QueueWorker
 {

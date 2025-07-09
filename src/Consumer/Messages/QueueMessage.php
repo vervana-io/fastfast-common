@@ -1,6 +1,6 @@
 <?php
 
-namespace Fastfast\Common\Consumer\Messages;
+namespace FastFast\Common\Consumer\Messages;
 
 
 class QueueMessage

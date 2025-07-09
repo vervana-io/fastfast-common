@@ -1,6 +1,6 @@
 <?php
 
-namespace Fastfast\Common\Util;
+namespace FastFast\Common\Util;
 
 use Symfony\Component\PropertyAccess\PropertyAccess;
 

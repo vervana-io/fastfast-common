@@ -10,7 +10,7 @@ class StartWorkerCommandTest extends TestCase
 {
     public function test_command_runs_all_workers()
     {
-        $mockWorker = new class implements \Fastfast\Common\Consumer\ConsumerInterface {
+        $mockWorker = new class implements \FastFast\Common\Consumer\ConsumerInterface {
             public static $handled = false;
             public function handle() { self::$handled = true; }
         };

@@ -1,6 +1,6 @@
 <?php
 
-namespace Fastfast\Common\Console;
+namespace FastFast\Common\Console;
 
 use Illuminate\Console\Command;
 
@@ -24,7 +24,7 @@ class StartWorker extends Command
             $workers[] = app($workerClass); // Use Laravel container for DI
         }
 
-        $queueWorker = new \Fastfast\Common\QueueWorker($workers);
+        $queueWorker = new \FastFast\Common\QueueWorker($workers);
         $queueWorker->startWorker();
         $this->info('All workers finished.');
         return 0;

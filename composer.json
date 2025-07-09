@@ -14,7 +14,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Fastfast\\Common\\": "src/"
+            "FastFast\\Common\\": "src/"
         }
     },
     "authors": [

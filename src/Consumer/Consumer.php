@@ -6,6 +6,7 @@ use Aws\Sqs\Exception\SqsException;
 use Aws\Sqs\SqsClient;
 use Exception;
 use FastFast\Common\Consumer\Messages\QueueMessage;
+use FastFast\Common\Notifications\Notification;
 use FastFast\Common\Util\Accessor;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -23,6 +24,7 @@ class Consumer {
 
     private SqsClient $sqsClient;
     private string $queueUrl;
+    protected Notification $notification;
 
     public function __construct(
         $checkForMessage,
@@ -32,6 +34,8 @@ class Consumer {
         $this->queueUrl = $aws['queue'];
         $this->loop = Loop::get();
         $this->checkForMessage = $checkForMessage;
+
+        $this->notification = new Notification();
     }
 
 

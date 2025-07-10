@@ -5,14 +5,15 @@ namespace FastFast\Common\Consumer;
 use Aws\Sqs\Exception\SqsException;
 use Aws\Sqs\SqsClient;
 use Exception;
-use FastFastCommon\Util\Accessor;
+use FastFast\Common\Consumer\Messages\QueueMessage;
+use FastFast\Common\Util\Accessor;
 use Illuminate\Support\Collection;
 use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
-use FastFastCommon\Consumer\Messages\QueueMessage;
+use function React\Promise\all;
 
 class Consumer {
 
@@ -26,10 +27,8 @@ class Consumer {
         $checkForMessage,
     ) {
         $aws = config('consumer');
-        if (!$this->sqsClient) {
-            $this->sqsClient = new SqsClient($aws['sqs']);
-        }
-        $this->queueUrl = $aws['queue_url'];
+        $this->sqsClient = new SqsClient($aws['sqs']);
+        $this->queueUrl = $aws['queue'];
         $this->loop = Loop::get();
         $this->checkForMessage = $checkForMessage;
     }
@@ -85,7 +84,7 @@ class Consumer {
                         $message = $this->convertMessage($messages[$key]);
                         $promises[] = $this->processMessage($message, $handler);
                     }
-                    \GuzzleHttp\Promise\Utils::settle($promises)->then(function ($results) {
+                    all($promises)->then(function ($results) {
                         $col = new Collection($results);
                         $rejected = $col->where('state', 'rejected')->count();
                         if ($rejected > 0) {

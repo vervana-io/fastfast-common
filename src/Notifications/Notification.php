@@ -7,6 +7,7 @@ use App\Models\Notification as Model_Notification;
 use App\Models\User;
 use App\Notifications\OrderStatusNotification;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Kreait\Firebase\Exception\FirebaseException;
 use Kreait\Firebase\Exception\MessagingException;
 use Kreait\Firebase\Factory;
@@ -234,9 +235,19 @@ class Notification {
         return $pusher_instance->trigger("FastFast", $event, $data);
     }
 
-    public function sendFirebaseMessage($device_token, $title, $body, $data, $userId = null, $status = 'created')
+    public function sendFirebaseMessage(User $user, $title, $body, $data, $status = 'created')
     {
-        $user = $userId ? User::find($userId) : null;
+        if ($user->devices) {
+            $devices = new Collection($user->devices);
+            $android = $devices->where('device_type', '=', 'android')->pluck('device_token');
+            if ($android->count() > 0) {
+                $device_tokens = $android->toArray();
+            }
+            $ios = $devices->where('device_type', '=', 'ios')->pluck('device_token');
+            if ($ios->count() > 0) {
+
+            }
+        }
         if ($user && $user->device_type == 'ios') {
             return $user->notify(new OrderStatusNotification($status, $data));
             //$type = $user->user_type == 1 ? 'customer' : ($user->user_type == 3 ? 'rider' : 'seller');

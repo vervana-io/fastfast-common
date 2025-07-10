@@ -44,7 +44,7 @@ class FastFastCommonProvider extends ServiceProvider
         $this->app->singleton(\FastFast\Common\Consumer\Consumer::class, function ($app) {
             $checkForMessage = 2; // or get from config if needed
             $consumer = new \FastFast\Common\Consumer\Consumer($checkForMessage);
-            $consumer->logger = $app->make('log'); // inject Laravel logger
+            //$consumer->logger = $app->make('log'); // inject Laravel logger
             return $consumer;
         });
     }

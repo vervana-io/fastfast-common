@@ -8,6 +8,7 @@ use Exception;
 use FastFast\Common\Consumer\Messages\QueueMessage;
 use FastFast\Common\Util\Accessor;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
@@ -54,7 +55,6 @@ class Consumer {
         $this->loop->addPeriodicTimer(
             $this->checkForMessage,
             function (TimerInterface $timer) use ($handler) {
-                $this->logger->info("Checking for messages", ['timer' => $this->checkForMessage]);
                 $this->getMessages($timer, function ($messages) use ($handler) {
 
                     for ($key = 0; $key < count($messages); $key++) {
@@ -76,19 +76,21 @@ class Consumer {
         $this->loop->addPeriodicTimer(
             $this->checkForMessage,
             function (TimerInterface $timer) use ($handler) {
-                $this->logger->info("Checking for messages", ['timer' => $this->checkForMessage]);
                 $this->getMessages($timer, function ($messages) use ($handler) {
-                    $promises = [];
+                    $processMessages = [];
                     for ($key = 0; $key < count($messages); $key++) {
                         //$this->logger->info('message content', [$messages[$key]['Body']]);
                         $message = $this->convertMessage($messages[$key]);
-                        $promises[] = $this->processMessage($message, $handler);
+
+                        Log::info("Checking for messages", ['received', $message]);
+                        $processMessages[] = $this->processMessage($message, $handler);
                     }
-                    all($promises)->then(function ($results) {
+                    all($processMessages)->then(function ($results) {
                         $col = new Collection($results);
-                        $rejected = $col->where('state', 'rejected')->count();
-                        if ($rejected > 0) {
+                        $rejected = $col->where('state', 'rejected');
+                        if ($rejected->count() > 0) {
                             //requeue rejected
+                            Log::warning('Rejected Promises', $col->toArray());// TODO move to DDL
                         }
                     });
                 });
@@ -114,7 +116,6 @@ class Consumer {
 
     private function getMessages(TimerInterface $timer, $handler): void
     {
-        $this->logger->info('QueueURL', [$this->queueUrl]);
         $result = $this->sqsClient->receiveMessage([
             'AttributeNames'        => ['SentTimestamp'],
             'MaxNumberOfMessages'   => 10,
@@ -150,9 +151,9 @@ class Consumer {
                 'QueueUrl' => $this->queueUrl, // REQUIRED
                 'ReceiptHandle' => $message->getReceiptHandle(), // REQUIRED
             ]);
-            $this->logger->info('acknowledge response', $response->toArray());
+            Log::info('acknowledge response', $response->toArray());
         } catch (Exception $ex) {
-            $this->logger->error($ex->getMessage(), $ex->getTrace());
+            Log::error($ex->getMessage(), $ex->getTrace());
         }
     }
 
@@ -175,7 +176,7 @@ class Consumer {
                 'ReceiptHandle' => $message->getReceiptHandle(), // REQUIRED
             ]);
         } catch (SqsException $exception) {
-            $this->logger->error($exception->getMessage(), $exception->getTrace());
+            Log::error($exception->getMessage(), $exception->getTrace());
         }
     }
 

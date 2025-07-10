@@ -15,8 +15,15 @@ use Kreait\Firebase\Messaging;
 use Kreait\Firebase\Messaging\CloudMessage;
 use Pusher\Pusher;
 use Pusher\PushNotifications\PushNotifications;
+use function Symfony\Component\String\b;
 
 class Notification {
+
+    public function sendUserAPNS($data, User $user, $type = 'customer')
+    {
+        $client = new CustomAPNNotification($type);
+        return $client->sendNotification($user, $data);
+    }
 
     private function getFirebaseInstance()
     {
@@ -235,32 +242,37 @@ class Notification {
         return $pusher_instance->trigger("FastFast", $event, $data);
     }
 
-    public function sendFirebaseMessage(User $user, $title, $body, $data, $status = 'created')
+    public function sendMessage(User $user, $title, $body, $data, $status = 'created')
     {
         if ($user->devices) {
             $devices = new Collection($user->devices);
-            $android = $devices->where('device_type', '=', 'android')->pluck('device_token');
+            $android = $devices->where('type', '=', 'android')->pluck('device_token');
             if ($android->count() > 0) {
                 $device_tokens = $android->toArray();
+                $this->sendToMultiDevices($device_tokens, $title, $body, $data);
             }
-            $ios = $devices->where('device_type', '=', 'ios')->pluck('device_token');
+            $ios = $devices->where('type', '=', 'ios')->pluck('device_token');
             if ($ios->count() > 0) {
-
+                $device_tokens = $ios->toArray();
+                $type = $user->user_type == 1 ? 'customer' : ($user->user_type == 3 ? 'rider' : 'seller');
+                //return $this->sendUserAPNS($data, $user, $type);
+                $client = new CustomAPNNotification($type);
+                $client->sendMultiDeviceNotification($device_tokens, $data);
             }
         }
         if ($user && $user->device_type == 'ios') {
-            return $user->notify(new OrderStatusNotification($status, $data));
-            //$type = $user->user_type == 1 ? 'customer' : ($user->user_type == 3 ? 'rider' : 'seller');
-            //return $this->sendUserAPNS($data, $user, $type);
+            //return $user->notify(new OrderStatusNotification($status, $data));
+            $type = $user->user_type == 1 ? 'customer' : ($user->user_type == 3 ? 'rider' : 'seller');
+            return $this->sendUserAPNS($data, $user, $type);
         }
         $messaging = $this->getFirebaseInstance();
-        $device_tokens = $this->validateFirebaseToken($messaging, $device_token);
+        $device_tokens = $this->validateFirebaseToken($messaging, $user->device_token);
         $resp = null;
         if(count($device_tokens) > 0)
         {
             $device_token = $device_tokens[0];
             $notification = $this->generateFirebaseNotification($title, $body);
-            $message = CloudMessage::withTarget('token', $device_token)->withNotification($notification);
+            $message = CloudMessage::withTarget('token', $user->device_token)->withNotification($notification);
             if(count($data) > 0)
             {
                 $message = $message->withData($data);

@@ -295,7 +295,7 @@ class Notification {
     }
 
 
-    protected function sendNotification(User $user, $data, $title, $body, $event, $status)
+    public function sendNotification(User $user, $data, $title, $body, $event, $status)
     {
         $this->createNotification($data);
         $seller_beam_device_token = $this->notification->manageUserBeamToken($user);
@@ -315,7 +315,7 @@ class Notification {
         return true;
     }
 
-    protected function sendFranchiseNotification(Order $order, $data, $title, $body, $event)
+    public function sendFranchiseNotification(Order $order, $data, $title, $body, $event)
     {
         $personnel_user_ids = Personnel::select('user_id')->where('franchise_id', '=', $order->franchise_id)->pluck('user_id')->toArray();
         //$personnel_device_tokens = User::select('device_token')->whereIn('id', $personnel_user_ids)->whereNotNull('device_token')->pluck('device_token')->toArray();

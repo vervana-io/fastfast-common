@@ -134,7 +134,7 @@ class Consumer {
             $handler($messages);
             $this->checkForMessage = 1;
         } else {
-            $this->checkForMessage = 10;
+            $this->checkForMessage = 4;
         }
     }
 

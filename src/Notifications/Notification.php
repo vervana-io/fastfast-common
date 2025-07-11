@@ -4,6 +4,8 @@ namespace FastFast\Common\Notifications;
 
 use App\Models\Admin;
 use App\Models\Notification as Model_Notification;
+use App\Models\Order;
+use App\Models\Personnel;
 use App\Models\User;
 use App\Notifications\OrderStatusNotification;
 use Carbon\Carbon;
@@ -15,7 +17,8 @@ use Kreait\Firebase\Messaging;
 use Kreait\Firebase\Messaging\CloudMessage;
 use Pusher\Pusher;
 use Pusher\PushNotifications\PushNotifications;
-use function Symfony\Component\String\b;
+use React\Promise\Deferred;
+use function React\Promise\all;
 
 class Notification {
 
@@ -289,5 +292,49 @@ class Notification {
     public function createNotification($data)
     {
         return Model_Notification::create($data);
+    }
+
+
+    protected function sendNotification(User $user, $data, $title, $body, $event, $status)
+    {
+        $this->createNotification($data);
+        $seller_beam_device_token = $this->notification->manageUserBeamToken($user);
+        $this->sendMessage($user, $title,$body, $data, $status);
+        if(!empty($seller_device_token))
+        {
+            $this->sendBeamMessage($seller_beam_device_token, $title, $body);
+            //$this->send_firebase_message_to_single_device($seller_device_token, $title, $body, $not_data, , 'rejected');
+        }
+        if(!empty($seller_beam_device_token))
+        {
+            //$this->send_beam_message([$seller_beam_device_token], $title, $body, $not_data);
+
+            $this->sendBeamMessage($seller_beam_device_token, $title, $body);
+        }
+        $this->sendPusherMessage($event, $data);
+        return true;
+    }
+
+    protected function sendFranchiseNotification(Order $order, $data, $title, $body, $event)
+    {
+        $personnel_user_ids = Personnel::select('user_id')->where('franchise_id', '=', $order->franchise_id)->pluck('user_id')->toArray();
+        //$personnel_device_tokens = User::select('device_token')->whereIn('id', $personnel_user_ids)->whereNotNull('device_token')->pluck('device_token')->toArray();
+        //$personnel_users = User::select('id', 'device_token', 'beam_token')->whereIn('id', $personnel_user_ids)->get();
+        $personnelUsers = User::query()->whereIn('id', $personnel_user_ids)->get();
+        //$device_tokens = [];
+        if($personnelUsers->count() > 0) {
+            $promise = $personnelUsers->map(function (User $user) use($data, $title, $body, $order, $event){
+                $p = new Deferred();
+                $not_data['user_id'] = $user->id;
+                $this->createNotification($data);
+                $device_tokens = $this->manageUserBeamToken($user);
+                $this->sendBeamMessage($device_tokens,$title, $body, $not_data);
+                $not_data['franchise_id'] = $order->franchise_id;
+                $this->sendMessage($user, $title,$body, $not_data);
+                $this->sendPusherMessage($event, $not_data);
+                return $p->promise();
+            });
+            return all($promise);
+        }
     }
 }

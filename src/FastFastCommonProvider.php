@@ -41,11 +41,11 @@ class FastFastCommonProvider extends ServiceProvider
             return new \FastFast\Common\Publisher\Publisher($app->make(\Aws\Sns\SnsClient::class));
         });
 
-        $this->app->singleton(\FastFast\Common\Consumer\Consumer::class, function ($app) {
+        /*$this->app->singleton(\FastFast\Common\Consumer\Consumer::class, function ($app) {
             $checkForMessage = 2; // or get from config if needed
             $consumer = new \FastFast\Common\Consumer\Consumer($checkForMessage);
             //$consumer->logger = $app->make('log'); // inject Laravel logger
             return $consumer;
-        });
+        });*/
     }
 }

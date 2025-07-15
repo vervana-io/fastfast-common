@@ -27,13 +27,12 @@ class Consumer {
     protected Notification $notification;
 
     public function __construct(
-        $checkForMessage,
     ) {
         $aws = config('consumer');
         $this->sqsClient = new SqsClient($aws['sqs']);
         $this->queueUrl = $aws['queue'];
         $this->loop = Loop::get();
-        $this->checkForMessage = $checkForMessage;
+        //$this->checkForMessage = $checkForMessage;
 
         $this->notification = new Notification();
     }

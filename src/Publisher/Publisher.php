@@ -16,7 +16,8 @@ class Publisher implements PublisherInterface
         return $this->client->publish([
             'TopicArn' => $topic,
             'Message' => json_encode($data),
-            'Subject' => $sub
+            'Subject' => $sub,
+            'MessageGroupId' => $data['event'] . $data['order']['id']
         ]);
     }
 }

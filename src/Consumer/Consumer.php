@@ -20,7 +20,7 @@ use function React\Promise\all;
 class Consumer {
 
     private LoopInterface $loop;
-    private $checkForMessage = 2;
+    private $checkForMessage = 0.1;
 
     private SqsClient $sqsClient;
     private string $queueUrl;
@@ -85,7 +85,7 @@ class Consumer {
                         //$this->logger->info('message content', [$messages[$key]['Body']]);
                         $message = $this->convertMessage($messages[$key]);
 
-                        Log::info("Checking for messages", ['received', $message]);
+                        //Log::info("Checking for messages", ['received', $message]);
                         $processMessages[] = $this->processMessage($message, $handler);
                     }
                     all($processMessages)->then(function ($results) {

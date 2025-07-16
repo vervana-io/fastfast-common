@@ -301,16 +301,12 @@ class Notification {
         $this->createNotification($data);
         $this->sendMessage($user, $title, $body, $data, $status);
         $seller_beam_device_token = $this->manageUserBeamToken($user);
-        if(!empty($seller_device_token))
-        {
-            $this->sendBeamMessage($seller_beam_device_token, $title, $body);
-            //$this->send_firebase_message_to_single_device($seller_device_token, $title, $body, $not_data, , 'rejected');
-        }
+
         if(!empty($seller_beam_device_token))
         {
             //$this->send_beam_message([$seller_beam_device_token], $title, $body, $not_data);
 
-            $this->sendBeamMessage($seller_beam_device_token, $title, $body);
+            $this->sendBeamMessage([$seller_beam_device_token], $title, $body, $data);
         }
         $this->sendPusherMessage($event, $data);
         return true;

@@ -8,6 +8,7 @@ use Exception;
 use FastFast\Common\Consumer\Messages\QueueMessage;
 use FastFast\Common\Notifications\Notification;
 use FastFast\Common\Util\Accessor;
+use Illuminate\Console\OutputStyle;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use React\EventLoop\Loop;
@@ -20,6 +21,7 @@ use function React\Promise\all;
 class Consumer {
 
     private LoopInterface $loop;
+    protected OutputStyle $logger;
     private $checkForMessage = 0.1;
 
     private SqsClient $sqsClient;
@@ -38,6 +40,11 @@ class Consumer {
     }
 
 
+
+    public function setLogger(OutputStyle $logger)
+    {
+        $this->logger = $logger;
+    }
 
     protected function convertMessage($message): QueueMessage
     {
@@ -58,8 +65,9 @@ class Consumer {
         $this->loop->addPeriodicTimer(
             $this->checkForMessage,
             function (TimerInterface $timer) use ($handler) {
+                $this->info('cheching for messages');
                 $this->getMessages($timer, function ($messages) use ($handler) {
-
+                    //$this->logger->info('Getting Message', count($messages));
                     for ($key = 0; $key < count($messages); $key++) {
                         //$this->logger->info('message content', [$messages[$key]['Body']]);
                         $message = $this->convertMessage($messages[$key]);
@@ -82,11 +90,10 @@ class Consumer {
                 $this->getMessages($timer, function ($messages) use ($handler) {
                     $processMessages = [];
                     for ($key = 0; $key < count($messages); $key++) {
-                        //$this->logger->info('message content', [$messages[$key]['Body']]);
-                        $message = $this->convertMessage($messages[$key]);
 
-                        //Log::info("Checking for messages", ['received', $message]);
+                        $message = $this->convertMessage($messages[$key]);
                         $processMessages[] = $this->processMessage($message, $handler);
+
                     }
                     all($processMessages)->then(function ($results) {
                         $col = new Collection($results);
@@ -95,26 +102,36 @@ class Consumer {
                             //requeue rejected
                             Log::warning('Rejected Promises', $col->toArray());// TODO move to DDL
                         }
+                    })->then(function ($results) {
+                        $this->logger->info('all processed'. $results);
                     });
                 });
             }
         );
     }
 
-    private function processMessage(QueueMessage $message, callable$handler): PromiseInterface
+    private function processMessage(QueueMessage $message, callable $handler): PromiseInterface
     {
         $differed = new Deferred();
         try {
+
+            $this->logger->info('message content'. $message->getMessageId());
+
             $done = $handler($message);
             if ($done) {
                 $this->ackMessage($message);
             } else {
                 $this->nackMessage($message);
             }
+            $differed->resolve($done);
         } catch (\Exception $exception) {
+            dd($exception);
             $differed->reject($exception);
         }
-        return $differed->promise();
+        return $differed->promise()->then(function ($re) {
+            $this->logger->info('Thenn -------'.$re);
+            return $re;
+        });
     }
 
     private function getMessages(TimerInterface $timer, $handler): void
@@ -127,7 +144,7 @@ class Consumer {
             'WaitTimeSeconds'       => 0,
             'VisibilityTimeout' => 30
         ]);
-
+        $this->info('Checking for message for -----'. $this->queueUrl, );
         $messages = $result->get('Messages');
         if ($messages != null) {
             $handler($messages);
@@ -137,6 +154,10 @@ class Consumer {
         }
     }
 
+    protected function info($message, $context = null)
+    {
+        $this->logger->info($message, $context);
+    }
     /**
      * Ack message
      *
@@ -154,7 +175,7 @@ class Consumer {
                 'QueueUrl' => $this->queueUrl, // REQUIRED
                 'ReceiptHandle' => $message->getReceiptHandle(), // REQUIRED
             ]);
-            Log::info('acknowledge response', $response->toArray());
+            $this->info('acknowledge response'. $response->count(), $response->toArray());
         } catch (Exception $ex) {
             Log::error($ex->getMessage(), $ex->getTrace());
         }

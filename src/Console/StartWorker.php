@@ -25,7 +25,7 @@ class StartWorker extends Command
         }
 
         $queueWorker = new \FastFast\Common\QueueWorker($workers);
-        $queueWorker->startWorker();
+        $queueWorker->startWorker($this->output);
         $this->info('All workers finished.');
         return 0;
     }

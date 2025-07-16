@@ -2,6 +2,7 @@
 
 namespace FastFast\Common;
 
+use Illuminate\Console\OutputStyle;
 class QueueWorker
 {
 
@@ -9,10 +10,13 @@ class QueueWorker
     {
     }
 
-    public function startWorker(): void
+    public function startWorker(OutputStyle $output = null): void
     {
-       foreach ($this->workers as $worker) {
-           $worker->handle();
-       }
+        foreach ($this->workers as $worker) {
+            if (method_exists($worker, 'setLogger')) {
+                $worker->setLogger($output);
+            }
+            $worker->handle($output);
+        }
     }
 }

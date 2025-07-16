@@ -9,7 +9,6 @@ use Pushok\InvalidPayloadException;
 use Pushok\Notification;
 use Pushok\Payload;
 use Pushok\Payload\Alert;
-use function App\Notifications\config;
 
 
 class CustomAPNNotification

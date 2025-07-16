@@ -125,7 +125,7 @@ class Consumer {
             }
             $differed->resolve($done);
         } catch (\Exception $exception) {
-            dd($exception);
+            dd($exception); //move to DDL
             $differed->reject($exception);
         }
         return $differed->promise()->then(function ($re) {
@@ -144,7 +144,7 @@ class Consumer {
             'WaitTimeSeconds'       => 0,
             'VisibilityTimeout' => 30
         ]);
-        $this->info('Checking for message for -----'. $this->queueUrl, );
+        //$this->info('Checking for message for -----'. $this->queueUrl, );
         $messages = $result->get('Messages');
         if ($messages != null) {
             $handler($messages);

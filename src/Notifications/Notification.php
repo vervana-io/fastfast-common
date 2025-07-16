@@ -298,7 +298,7 @@ class Notification {
     public function sendNotification(User $user, $data, $title, $body, $event, $status)
     {
         $this->createNotification($data);
-        $seller_beam_device_token = $this->notification->manageUserBeamToken($user);
+        $seller_beam_device_token = $this->manageUserBeamToken($user);
         $this->sendMessage($user, $title,$body, $data, $status);
         if(!empty($seller_device_token))
         {

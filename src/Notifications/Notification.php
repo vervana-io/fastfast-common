@@ -269,18 +269,19 @@ class Notification {
             return $this->sendUserAPNS($data, $user, $type);
         }
         $messaging = $this->getFirebaseInstance();
-        $device_tokens = $this->validateFirebaseToken($messaging, $user->device_token);
-        $resp = null;
-        if(count($device_tokens) > 0)
-        {
-            $device_token = $device_tokens[0];
-            $notification = $this->generateFirebaseNotification($title, $body);
-            $message = CloudMessage::withTarget('token', $user->device_token)->withNotification($notification);
-            if(count($data) > 0)
-            {
-                $message = $message->withData($data);
+        if ($user->device_token) {
+
+            $device_tokens = $this->validateFirebaseToken($messaging, $user->device_token);
+            $resp = null;
+            if (count($device_tokens) > 0) {
+                $device_token = $device_tokens[0];
+                $notification = $this->generateFirebaseNotification($title, $body);
+                $message = CloudMessage::withTarget('token', $user->device_token)->withNotification($notification);
+                if (count($data) > 0) {
+                    $message = $message->withData($data);
+                }
+                $resp = $messaging->send($message);
             }
-            $resp = $messaging->send($message);
         }
         return [
             'status' => true,
@@ -298,8 +299,8 @@ class Notification {
     public function sendNotification(User $user, $data, $title, $body, $event, $status)
     {
         $this->createNotification($data);
+        $this->sendMessage($user, $title, $body, $data, $status);
         $seller_beam_device_token = $this->manageUserBeamToken($user);
-        $this->sendMessage($user, $title,$body, $data, $status);
         if(!empty($seller_device_token))
         {
             $this->sendBeamMessage($seller_beam_device_token, $title, $body);

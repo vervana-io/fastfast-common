@@ -269,10 +269,10 @@ class Notification {
             return $this->sendUserAPNS($data, $user, $type);
         }
         $messaging = $this->getFirebaseInstance();
+        $resp = null;
         if ($user->device_token) {
-
             $device_tokens = $this->validateFirebaseToken($messaging, $user->device_token);
-            $resp = null;
+
             if (count($device_tokens) > 0) {
                 $device_token = $device_tokens[0];
                 $notification = $this->generateFirebaseNotification($title, $body);

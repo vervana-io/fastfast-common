@@ -11,8 +11,9 @@ class Publisher implements PublisherInterface
     {
     }
 
-    public function publish($data, $topic, $sub = null): Result
+    public function publish($data, $topic = null, $sub = null): Result
     {
+        $topic = $topic ?? config('consumer.topic_arn');
         return $this->client->publish([
             'TopicArn' => $topic,
             'Message' => json_encode($data),

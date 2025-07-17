@@ -22,7 +22,7 @@ class Consumer {
 
     private LoopInterface $loop;
     protected OutputStyle $logger;
-    private $checkForMessage = 0.1;
+    private $checkForMessage = 2;
 
     private SqsClient $sqsClient;
     private string $queueUrl;
@@ -124,12 +124,12 @@ class Consumer {
                 $this->nackMessage($message);
             }
             $differed->resolve($done);
-        } catch (\Exception $exception) {
-            dd($exception); //move to DDL
+        } catch (Exception $exception) {
+            //dd($exception); //move to DDL
             $differed->reject($exception);
         }
         return $differed->promise()->then(function ($re) {
-            $this->logger->info('Thenn -------'.$re);
+            //$this->logger->info('Thenn -------'.$re);
             return $re;
         });
     }

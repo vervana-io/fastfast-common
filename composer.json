@@ -10,7 +10,11 @@
     "react/promise": "^3.2",
     "symfony/property-access": "^7.3",
     "aws/aws-sdk-php": "^3.349",
-    "illuminate/console": "^10.48"
+    "illuminate/console": "^10.48",
+    "async-aws/sqs": "^2.6",
+    "react/async": "^4.3",
+    "react/child-process": "^0.6.6",
+    "clue/mq-react": "^1.7"
   },
   "autoload": {
     "psr-4": {

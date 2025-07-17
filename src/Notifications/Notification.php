@@ -9,7 +9,6 @@ use App\Models\Personnel;
 use App\Models\User;
 use App\Notifications\OrderStatusNotification;
 use Carbon\Carbon;
-use Illuminate\Support\Collection;
 use Kreait\Firebase\Exception\FirebaseException;
 use Kreait\Firebase\Exception\MessagingException;
 use Kreait\Firebase\Factory;
@@ -248,13 +247,13 @@ class Notification {
     public function sendMessage(User $user, $title, $body, $data, $status = 'created')
     {
         if ($user->devices) {
-            $devices = new Collection($user->devices);
-            $android = $devices->where('type', '=', 'android')->pluck('device_token');
+            $devices = $user->devices->collect();
+            $android = $devices->where('type', '=', 'android')->pluck('token');
             if ($android->count() > 0) {
                 $device_tokens = $android->toArray();
                 $this->sendToMultiDevices($device_tokens, $title, $body, $data);
             }
-            $ios = $devices->where('type', '=', 'ios')->pluck('device_token');
+            $ios = $devices->where('type', '=', 'ios')->pluck('token');
             if ($ios->count() > 0) {
                 $device_tokens = $ios->toArray();
                 $type = $user->user_type == 1 ? 'customer' : ($user->user_type == 3 ? 'rider' : 'seller');

@@ -238,10 +238,10 @@ class Notification {
         ]);
     }
 
-    public function sendPusherMessage($event, $data=[])
+    public function sendPusherMessage($event, $data=[], $channel = "FastFast")
     {
         $pusher_instance = $this->getPusherInstance();
-        return $pusher_instance->trigger("FastFast", $event, $data);
+        return $pusher_instance->trigger($channel, $event, $data);
     }
 
     public function sendMessage(User $user, $title, $body, $data, $status = 'created')
@@ -295,7 +295,7 @@ class Notification {
     }
 
 
-    public function sendNotification(User $user, $data, $title, $body, $event, $status)
+    public function sendNotification(User $user, $data, $title, $body, $event, $status, $channel = 'FastFast')
     {
         $this->createNotification($data);
         $this->sendMessage($user, $title, $body, $data, $status);
@@ -307,7 +307,7 @@ class Notification {
 
             $this->sendBeamMessage([$seller_beam_device_token], $title, $body, $data);
         }
-        $this->sendPusherMessage($event, $data);
+        $this->sendPusherMessage($event, $data, $channel);
         return true;
     }
 

@@ -36,7 +36,7 @@ class Consumer {
         $this->loop = Loop::get();
         //$this->checkForMessage = $checkForMessage;
         if (config('app.env') == 'local') {
-            $this->checkForMessage = 300;
+            $this->checkForMessage = env('SQS_CHECK_FOR_MESSAGE', 300);
         }
 
         $this->notification = new Notification();

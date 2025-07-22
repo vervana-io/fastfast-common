@@ -29,12 +29,21 @@ class FastFastCommonProvider extends ServiceProvider
      */
     public function register()
     {
+
         $this->app->singleton(\Aws\Sqs\SqsClient::class, function ($app) {
-            return new \Aws\Sqs\SqsClient(config('consumer.sqs'));
+            $conf = config('consumer.sqs');
+            if (config('app.env') != 'local') {
+                unset($conf['endpoint']);
+            }
+            return new \Aws\Sqs\SqsClient($conf);
         });
 
         $this->app->singleton(\Aws\Sns\SnsClient::class, function ($app) {
-            return new \Aws\Sns\SnsClient(config('consumer.sns'));
+            $conf = config('consumer.sqs');
+            if (config('app.env') != 'local') {
+                unset($conf['endpoint']);
+            }
+            return new \Aws\Sns\SnsClient($conf);
         });
 
         $this->app->singleton(\FastFast\Common\Publisher\Publisher::class, function ($app) {

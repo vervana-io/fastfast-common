@@ -11,14 +11,20 @@ class Publisher implements PublisherInterface
     {
     }
 
-    public function publish($data, $topic = null, $sub = null): Result
+    public function publish($data, $topic = null, $sub = null): array
     {
         $topic = $topic ?? config('consumer.topic_arn');
-        return $this->client->publish([
-            'TopicArn' => $topic,
-            'Message' => json_encode($data),
-            'Subject' => $sub,
-            'MessageGroupId' => $data['event'] . $data['order']['id']
-        ]);
+        try {
+
+            $result =  $this->client->publish([
+                'TopicArn' => $topic,
+                'Message' => json_encode($data),
+                'Subject' => $sub,
+                'MessageGroupId' => $data['event'] . $data['order']['id']
+            ]);
+            return $result->toArray();
+        }catch (\Exception $e) {
+            return [];
+        }
     }
 }

@@ -35,6 +35,9 @@ class Consumer {
         $this->queueUrl = $aws['queue'];
         $this->loop = Loop::get();
         //$this->checkForMessage = $checkForMessage;
+        if (config('app.env') == 'local') {
+            $this->checkForMessage = 300;
+        }
 
         $this->notification = new Notification();
     }

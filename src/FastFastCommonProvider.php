@@ -32,16 +32,16 @@ class FastFastCommonProvider extends ServiceProvider
 
         $this->app->singleton(\Aws\Sqs\SqsClient::class, function ($app) {
             $conf = config('consumer.sqs');
-            if (config('app.env') != 'local') {
-                unset($conf['endpoint']);
+            if (config('app.env') == 'local') {
+                $conf['endpoint'] = env('AWS_ENDPOINT', 'http://fake-aws:8080');
             }
             return new \Aws\Sqs\SqsClient($conf);
         });
 
         $this->app->singleton(\Aws\Sns\SnsClient::class, function ($app) {
             $conf = config('consumer.sqs');
-            if (config('app.env') != 'local') {
-                unset($conf['endpoint']);
+            if (config('app.env') == 'local') {
+                $conf['endpoint'] = env('AWS_ENDPOINT', 'http://fake-aws:8080');
             }
             return new \Aws\Sns\SnsClient($conf);
         });

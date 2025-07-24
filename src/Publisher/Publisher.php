@@ -4,10 +4,11 @@ namespace FastFast\Common\Publisher;
 
 use Aws\Sns\SnsClient;
 use Aws\Result;
+use Aws\Sqs\SqsClient;
 
 class Publisher implements PublisherInterface
 {
-    public function __construct(private SnsClient $client)
+    public function __construct(private SnsClient $client, private SqsClient $sqsClient)
     {
     }
 
@@ -26,5 +27,17 @@ class Publisher implements PublisherInterface
         }catch (\Exception $e) {
             return [];
         }
+    }
+
+    public function produce($data, $qUrl, $delay = 1, $param = [] )
+    {
+        $params = [
+            'DelaySeconds' => $delay,
+            'MessageAttributes' => [],
+            ...$param,
+            'MessageBody' => json_encode($data),
+            'QueueUrl' => $qUrl,
+        ];
+        return $this->sqsClient->sendMessage($params);
     }
 }

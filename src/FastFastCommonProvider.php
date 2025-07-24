@@ -47,7 +47,7 @@ class FastFastCommonProvider extends ServiceProvider
         });
 
         $this->app->singleton(\FastFast\Common\Publisher\Publisher::class, function ($app) {
-            return new \FastFast\Common\Publisher\Publisher($app->make(\Aws\Sns\SnsClient::class));
+            return new \FastFast\Common\Publisher\Publisher($app->make(\Aws\Sns\SnsClient::class),$app->make(\Aws\Sqs\SqsClient::class));
         });
 
         $this->app->singleton(\FastFast\Common\Consumer\Consumer::class, function ($app) {

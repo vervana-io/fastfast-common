@@ -32,7 +32,7 @@ class Consumer {
     ) {
         $aws = config('consumer');
         if (config('app.env') == 'local') {
-            $aws['sqs']['endpoint'] = env('AWS_ENDPOINT', 'http://fake-aws:8080');
+            $aws['sqs']['endpoint'] = env('AWS_ENDPOINT', 'http://localstack:4566');
             $this->checkForMessage = env('SQS_CHECK_FOR_MESSAGE', 300);
         }
         $this->sqsClient = new SqsClient($aws['sqs']);

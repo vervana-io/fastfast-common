@@ -359,7 +359,7 @@ class Notification {
 
     public function publishToNotificationService($data, $pattern = 'notification')
     {
-        $this->publisher->produce([], config('service.notification'), [
+        return $this->publisher->produce([], config('service.notification'), [
             'pattern' => [
                 'DataType' => 'String',
                 'StringValue' => $pattern,

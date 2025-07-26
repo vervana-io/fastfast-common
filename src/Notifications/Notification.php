@@ -9,6 +9,7 @@ use App\Models\Personnel;
 use App\Models\User;
 use App\Notifications\OrderStatusNotification;
 use Carbon\Carbon;
+use FastFast\Common\Publisher\PublisherInterface;
 use Kreait\Firebase\Exception\FirebaseException;
 use Kreait\Firebase\Exception\MessagingException;
 use Kreait\Firebase\Factory;
@@ -20,6 +21,10 @@ use React\Promise\Deferred;
 use function React\Promise\all;
 
 class Notification {
+
+    public function __construct(private PublisherInterface $publisher)
+    {
+    }
 
     public function sendUserAPNS($data, User $user, $type = 'customer')
     {
@@ -210,38 +215,24 @@ class Notification {
 
     public function sendBeamMessage($tokens, $title, $body, $data = [])
     {
-        $beam_instance = $this->getBeamInstance();
-        return $beam_instance->publishToUsers($tokens, [
-            "apns" => [
-                "aps" => [
-                    "alert" => [
-                        "title" => $title,
-                        "body" => $body,
-                    ],
-                ],
-                'custom' => $data,
+         $this->publishToNotificationService([
+            'to' => $tokens,
+            'message' => [
+                'title' => $title,
+                'body' => $body,
+                'data' => $data
             ],
-            "fcm" => [
-                "notification" => [
-                    "title" => $title,
-                    "body" => $body,
-                ],
-                'data' => $data,
-            ],
-            "web" => [
-                "notification" => [
-                    "title" => $title,
-                    "body" => $body,
-                ],
-                'data' => $data,
-            ],
-        ]);
+        ], 'device');
+
     }
 
-    public function sendPusherMessage($event, $data=[], $channel = "FastFast")
+    public function sendPusherMessage($event, $data=[], $channel = "FastFast"): void
     {
-        $pusher_instance = $this->getPusherInstance();
-        return $pusher_instance->trigger($channel, $event, $data);
+         $this->publishToNotificationService([
+            'to' => $channel,
+            'message' => $data,
+            ], 'pusher'
+         );
     }
 
     public function sendMessage(User $user, $title, $body, $data, $status = 'created')
@@ -251,21 +242,45 @@ class Notification {
             $android = $devices->where('type', '=', 'android')->pluck('token');
             if ($android->count() > 0) {
                 $device_tokens = $android->toArray();
-                $this->sendToMultiDevices($device_tokens, $title, $body, $data);
+                //$this->sendToMultiDevices($device_tokens, $title, $body, $data);
+                $this->publishToNotificationService([
+                    'to' => $device_tokens,
+                    'message' => [
+                        'title' => $title,
+                        'body' => $body,
+                        'data' => $data
+                    ],
+                ], 'device');
             }
             $ios = $devices->where('type', '=', 'ios')->pluck('token');
             if ($ios->count() > 0) {
                 $device_tokens = $ios->toArray();
                 $type = $user->user_type == 1 ? 'customer' : ($user->user_type == 3 ? 'rider' : 'seller');
                 //return $this->sendUserAPNS($data, $user, $type);
-                $client = new CustomAPNNotification($type);
-                $client->sendMultiDeviceNotification($device_tokens, $data);
+                //$client = new CustomAPNNotification($type);
+                //$client->sendMultiDeviceNotification($device_tokens, $data);
+                $this->publishToNotificationService([
+                    'to' => $device_tokens,
+                    'message' => [
+                        'title' => $title,
+                        'body' => $body,
+                        'data' => $data
+                    ],
+                ], 'device');
             }
         }
         if ($user && $user->device_type == 'ios') {
             //return $user->notify(new OrderStatusNotification($status, $data));
             $type = $user->user_type == 1 ? 'customer' : ($user->user_type == 3 ? 'rider' : 'seller');
-            return $this->sendUserAPNS($data, $user, $type);
+            //return $this->sendUserAPNS($data, $user, $type);
+            $this->publishToNotificationService([
+                'to' => [$user->device_type],
+                'message' => [
+                    'title' => $title,
+                    'body' => $body,
+                    'data' => $data
+                ],
+            ], 'device');
         }
         $messaging = $this->getFirebaseInstance();
         $resp = null;
@@ -274,12 +289,20 @@ class Notification {
 
             if (count($device_tokens) > 0) {
                 $device_token = $device_tokens[0];
-                $notification = $this->generateFirebaseNotification($title, $body);
+                $this->publishToNotificationService([
+                    'to' => [$device_token],
+                    'message' => [
+                        'title' => $title,
+                        'body' => $body,
+                        'data' => $data
+                    ],
+                ], 'device');
+                /*$notification = $this->generateFirebaseNotification($title, $body);
                 $message = CloudMessage::withTarget('token', $user->device_token)->withNotification($notification);
                 if (count($data) > 0) {
                     $message = $message->withData($data);
                 }
-                $resp = $messaging->send($message);
+                $resp = $messaging->send($message);*/
             }
         }
         return [
@@ -332,5 +355,15 @@ class Notification {
             });
             return all($promise);
         }
+    }
+
+    public function publishToNotificationService($data, $pattern = 'notification')
+    {
+        $this->publisher->produce([], config('service.notification'), [
+            'pattern' => [
+                'DataType' => 'String',
+                'StringValue' => $pattern,
+            ],
+        ]);
     }
 }

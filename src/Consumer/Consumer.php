@@ -7,6 +7,7 @@ use Aws\Sqs\SqsClient;
 use Exception;
 use FastFast\Common\Consumer\Messages\QueueMessage;
 use FastFast\Common\Notifications\Notification;
+use FastFast\Common\Publisher\Publisher;
 use FastFast\Common\Util\Accessor;
 use Illuminate\Console\OutputStyle;
 use Illuminate\Support\Collection;
@@ -39,7 +40,7 @@ class Consumer {
         $this->queueUrl = $aws['queue'];
         $this->loop = Loop::get();
         //$this->checkForMessage = $checkForMessage;
-        $this->notification = new Notification();
+        $this->notification = new Notification(app(Publisher::class));
     }
 
 

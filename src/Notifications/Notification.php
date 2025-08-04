@@ -357,13 +357,13 @@ class Notification {
         }
     }
 
-    public function publishToNotificationService($data, $pattern = 'notification')
+    public function publishToNotificationService($data, $pattern = 'notification', $messageId = 'notification-group-id')
     {
-        return $this->publisher->produce([], config('service.notification'), [
+        return $this->publisher->produce($data, config('services.notification'), [
             'pattern' => [
                 'DataType' => 'String',
                 'StringValue' => $pattern,
             ],
-        ]);
+        ], $messageId);
     }
 }

@@ -29,14 +29,14 @@ class Publisher implements PublisherInterface
         }
     }
 
-    public function produce($data, $qUrl, $delay = 1, $param = [] )
+    public function produce($data, $qUrl, $paramAttributes = [], $id = 'order-message-group-id')
     {
         $params = [
-            'DelaySeconds' => $delay,
-            'MessageAttributes' => [],
-            ...$param,
+            //'DelaySeconds' => $delay,
+            'MessageAttributes' => $paramAttributes,
             'MessageBody' => json_encode($data),
             'QueueUrl' => $qUrl,
+            'MessageGroupId' => $id,
         ];
         return $this->sqsClient->sendMessage($params);
     }

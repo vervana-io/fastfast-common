@@ -222,7 +222,7 @@ class Notification {
                 'body' => $body,
                 'data' => $data
             ],
-        ], 'device');
+        ], 'beam');
 
     }
 

@@ -42,6 +42,9 @@ class CustomAPNNotification
      */
     public function sendNotification(User $user, $data = [])
   {
+      if (!$user->device_token) {
+          return [];
+      }
     $authProvider = AuthProvider\Token::create($this->options);
     $client = new Client($authProvider, $this->options['production']);
 

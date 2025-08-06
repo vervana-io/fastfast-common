@@ -262,7 +262,7 @@ class Notification {
                 $client->sendMultiDeviceNotification($device_tokens, $data);
             }
         }
-        if ($user && $user->device_type == 'ios') {
+        if ($user && $user->device_token && $user->device_type == 'ios') {
             //return $user->notify(new OrderStatusNotification($status, $data));
             $type = $user->user_type == 1 ? 'customer' : ($user->user_type == 3 ? 'rider' : 'seller');
             return $this->sendUserAPNS($data, $user, $type);

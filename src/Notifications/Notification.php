@@ -307,7 +307,7 @@ class Notification {
 
             $this->sendBeamMessage([$seller_beam_device_token], $title, $body, $data);
         }
-        if ($user->user_type == 3 && $event == 'rider_new_order') { // for rider notification issues
+        if ($event == 'rider_new_order') { // for rider notification issues
             $data = [
                 'order' => $data
             ];

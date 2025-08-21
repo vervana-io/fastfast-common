@@ -422,6 +422,59 @@ class FirestoreClient
     }
 
     /**
+     * Recursively parses a Firestore-formatted document back into a simple PHP array.
+     * @param array $fields The 'fields' array from a Firestore document.
+     * @return array The clean PHP array.
+     */
+    function parseFirestoreDocument(array $fields): array
+    {
+        $result = [];
+        foreach ($fields as $key => $value) {
+            // The first key of the value array determines its type
+            $type = key($value);
+            switch ($type) {
+                case 'stringValue':
+                case 'doubleValue':
+                case 'booleanValue':
+                    $result[$key] = $value[$type];
+                    break;
+                case 'integerValue':
+                    // Convert the integer-as-a-string back to a proper int
+                    $result[$key] = (int)$value[$type];
+                    break;
+                case 'mapValue':
+                    // Recursively parse nested objects
+                    $result[$key] = $this->parseFirestoreDocument($value[$type]['fields']);
+                    break;
+                case 'arrayValue':
+                    $result[$key] = [];
+                    // Check if 'values' key exists before processing
+                    if (isset($value[$type]['values'])) {
+                        foreach ($value[$type]['values'] as $item) {
+                            // Each item in the array is its own typed value, likely a map
+                            $itemType = key($item);
+                            if ($itemType === 'mapValue') {
+                                $result[$key][] = $this->parseFirestoreDocument($item[$itemType]['fields']);
+                            } else {
+                                // Handle other potential types inside an array if needed
+                                $result[$key][] = $item[$itemType];
+                            }
+                        }
+                    }
+                    break;
+                case 'nullValue':
+                    $result[$key] = null;
+                    break;
+                // Add other types like timestampValue, geoPointValue if you use them
+                default:
+                    $result[$key] = $value[$type];
+                    break;
+            }
+        }
+        return $result;
+    }
+
+    /**
      * Convert Firestore fields back to PHP array
      *
      * @param array $fields
@@ -548,57 +601,78 @@ class FirestoreClient
     }
 
     /**
-     * Search for documents in a collection based on field filters
+     * Search for documents in a collection based on field filters.
+     * Note: This implementation uses the runQuery method and supports 'EQUAL' operators.
+     * For more complex queries (e.g., >, <, array-contains), the query structure needs to be expanded.
      *
-     * @param string $collection
-     * @param array $filters Array of field filters ['field_name' => 'value']
-     * @param int $limit Maximum number of documents to return
-     * @param string|null $orderBy Field to order by
-     * @param string $direction 'asc' or 'desc'
-     * @return array Array of documents matching the filters
+     * @param string $collection The collection ID to search in.
+     * @param array $filters An associative array of field filters, e.g., ['field_name' => 'value'].
+     * @param int $limit The maximum number of documents to return.
+     * @param int $offset The number of documents to skip.
+     * @param string|null $orderBy The field to order the results by.
+     * @param string $direction The order direction, 'asc' or 'desc'.
+     * @return array An array of matching documents.
+     * @throws FirestoreException
      * @throws GuzzleException
      */
-    public function searchDocuments(string $collection, array $filters = [], int $limit = 100, ?string $orderBy = null, string $direction = 'asc'): array
+    public function searchDocuments(string $collection, array $filters = [], int $limit = 100, int $offset = 0, ?string $orderBy = null, string $direction = 'asc'): array
     {
+        $queryUrl = rtrim(dirname($this->baseUrl), '/') . ':runQuery';
+
+        $structuredQuery = [
+            'from' => [['collectionId' => $collection]],
+            'limit' => $limit,
+            'offset' => $offset,
+        ];
+
+        if (!empty($filters)) {
+            $fieldFilters = [];
+            foreach ($filters as $field => $value) {
+                $fieldFilters[] = [
+                    'fieldFilter' => [
+                        'field' => ['fieldPath' => $field],
+                        'op' => 'EQUAL',
+                        'value' => $this->convertValue($value)
+                    ]
+                ];
+            }
+
+            if (count($fieldFilters) === 1) {
+                $structuredQuery['where'] = $fieldFilters[0];
+            } else {
+                $structuredQuery['where'] = [
+                    'compositeFilter' => [
+                        'op' => 'AND',
+                        'filters' => $fieldFilters
+                    ]
+                ];
+            }
+        }
+
+        if ($orderBy) {
+            $structuredQuery['orderBy'] = [
+                [
+                    'field' => ['fieldPath' => $orderBy],
+                    'direction' => strtoupper($direction) === 'DESC' ? 'DESCENDING' : 'ASCENDING'
+                ]
+            ];
+        }
+
         try {
-            $url = "{$this->baseUrl}/{$collection}?key={$this->apiKey}";
-            
-            // Build query parameters
-            $queryParams = [];
-            
-            // Add filters
-            if (!empty($filters)) {
-                foreach ($filters as $field => $value) {
-                    $queryParams[] = "where={$field}=" . urlencode(json_encode($this->convertToFirestoreFields([$field => $value])[$field]));
-                }
-            }
-            
-            // Add limit
-            if ($limit > 0) {
-                $queryParams[] = "pageSize={$limit}";
-            }
-            
-            // Add ordering
-            if ($orderBy) {
-                $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
-                $queryParams[] = "orderBy={$orderBy} {$direction}";
-            }
-            
-            if (!empty($queryParams)) {
-                $url .= '&' . implode('&', $queryParams);
-            }
+            $response = $this->httpClient->post($queryUrl, [
+                'json' => ['structuredQuery' => $structuredQuery]
+            ]);
 
-            $response = $this->httpClient->get($url);
-            $result = json_decode($response->getBody()->getContents(), true);
-
+            $results = json_decode($response->getBody()->getContents(), true);
             $documents = [];
-            if (isset($result['documents'])) {
-                foreach ($result['documents'] as $document) {
+
+            foreach ($results as $result) {
+                if (isset($result['document'])) {
                     $documents[] = [
-                        'id' => basename($document['name']),
-                        'data' => $this->convertFromFirestoreFields($document['fields'] ?? []),
-                        'createTime' => $document['createTime'] ?? null,
-                        'updateTime' => $document['updateTime'] ?? null
+                        'id' => basename($result['document']['name']),
+                        'data' => $this->parseFirestoreDocument($result['document']['fields'] ?? []),
+                        'createTime' => $result['document']['createTime'] ?? null,
+                        'updateTime' => $result['document']['updateTime'] ?? null
                     ];
                 }
             }
@@ -607,105 +681,41 @@ class FirestoreClient
                 'collection' => $collection,
                 'filters' => $filters,
                 'limit' => $limit,
+                'offset' => $offset,
                 'results_count' => count($documents)
             ]);
 
             return $documents;
 
         } catch (RequestException $e) {
+            $errorBody = $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : null;
             Log::error('Failed to search documents in Firestore', [
                 'collection' => $collection,
                 'filters' => $filters,
                 'error' => $e->getMessage(),
-                'response' => $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : null
+                'response' => $errorBody
             ]);
             
-            throw new FirestoreException('Failed to search documents: ' . $e->getMessage(), $e->getCode(), $e);
+            throw new FirestoreException('Failed to search documents: ' . $e->getMessage() . ' - ' . $errorBody, $e->getCode(), $e);
         }
     }
 
     /**
-     * Search for documents asynchronously
+     * Search for documents asynchronously.
      *
      * @param string $collection
-     * @param array $filters Array of field filters ['field_name' => 'value']
-     * @param int $limit Maximum number of documents to return
-     * @param string|null $orderBy Field to order by
-     * @param string $direction 'asc' or 'desc'
-     * @return \GuzzleHttp\Promise\PromiseInterface
+     * @param array $filters
+     * @param int $limit
+     * @param int $offset
+     * @param string|null $orderBy
+     * @param string $direction
+     * @return Promise\PromiseInterface
      */
-    public function searchDocumentsAsync(string $collection, array $filters = [], int $limit = 100, ?string $orderBy = null, string $direction = 'asc'): \GuzzleHttp\Promise\PromiseInterface
+    public function searchDocumentsAsync(string $collection, array $filters = [], int $limit = 100, int $offset = 0, ?string $orderBy = null, string $direction = 'asc'): Promise\PromiseInterface
     {
-        $url = "{$this->baseUrl}/{$collection}?key={$this->apiKey}";
-        
-        // Build query parameters
-        $queryParams = [];
-        
-        // Add filters
-        if (!empty($filters)) {
-            foreach ($filters as $field => $value) {
-                $queryParams[] = "where={$field}=" . urlencode(json_encode($this->convertToFirestoreFields([$field => $value])[$field]));
-            }
-        }
-        
-        // Add limit
-        if ($limit > 0) {
-            $queryParams[] = "pageSize={$limit}";
-        }
-        
-                    // Add ordering
-            if ($orderBy) {
-                $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
-                $queryParams[] = "orderBy={$orderBy} {$direction}";
-            }
-        
-        if (!empty($queryParams)) {
-            $url .= '&' . implode('&', $queryParams);
-        }
-
-        return $this->httpClient->getAsync($url)->then(
-            function ($response) use ($collection, $filters, $limit) {
-                $result = json_decode($response->getBody()->getContents(), true);
-
-                $documents = [];
-                if (isset($result['documents'])) {
-                    foreach ($result['documents'] as $document) {
-                        $documents[] = [
-                            'id' => basename($document['name']),
-                            'data' => $this->convertFromFirestoreFields($document['fields'] ?? []),
-                            'createTime' => $document['createTime'] ?? null,
-                            'updateTime' => $document['updateTime'] ?? null
-                        ];
-                    }
-                }
-
-                Log::info('Documents searched in Firestore (async)', [
-                    'collection' => $collection,
-                    'filters' => $filters,
-                    'limit' => $limit,
-                    'results_count' => count($documents)
-                ]);
-
-                return $documents;
-            },
-            function ($exception) use ($collection, $filters) {
-                $errorMessage = $exception->getMessage();
-                $errorResponse = null;
-                
-                if ($exception instanceof RequestException && $exception->hasResponse()) {
-                    $errorResponse = $exception->getResponse()->getBody()->getContents();
-                }
-
-                Log::error('Failed to search documents in Firestore (async)', [
-                    'collection' => $collection,
-                    'filters' => $filters,
-                    'error' => $errorMessage,
-                    'response' => $errorResponse
-                ]);
-                
-                throw new FirestoreException('Failed to search documents (async): ' . $errorMessage, $exception->getCode(), $exception);
-            }
-        );
+        return Promise\Utils::task(function () use ($collection, $filters, $limit, $offset, $orderBy, $direction) {
+            return $this->searchDocuments($collection, $filters, $limit, $offset, $orderBy, $direction);
+        });
     }
 
     /**

@@ -719,95 +719,125 @@ class FirestoreClient
     }
 
     /**
-     * Search for documents with pagination support
+     * Search for documents with cursor-based pagination.
+     * Note: An 'orderBy' clause is required for pagination.
      *
      * @param string $collection
-     * @param array $filters Array of field filters ['field_name' => 'value']
-     * @param int $limit Maximum number of documents to return
-     * @param string|null $pageToken Token for pagination
-     * @param string|null $orderBy Field to order by
-     * @param string $direction 'asc' or 'desc'
-     * @return array Array with documents and pagination info
+     * @param array $filters
+     * @param int $limit
+     * @param array|null $startAfter An array of values from the previous page's last document, corresponding to the orderBy field(s).
+     * @param string $orderBy The field to order by. This is required for pagination.
+     * @param string $direction
+     * @return array An array containing the documents and the cursor for the next page.
+     * @throws FirestoreException
      * @throws GuzzleException
      */
-    public function searchDocumentsPaginated(string $collection, array $filters = [], int $limit = 100, ?string $pageToken = null, ?string $orderBy = null, string $direction = 'asc'): array
+    public function searchDocumentsPaginated(string $collection, array $filters = [], int $limit = 100, ?array $startAfter = null, string $orderBy = 'id', string $direction = 'asc'): array
     {
+        if (empty($orderBy)) {
+            throw new \InvalidArgumentException('The "orderBy" parameter is required for paginated searches.');
+        }
+
+        $queryUrl = rtrim(dirname($this->baseUrl), '/') . ':runQuery';
+
+        $structuredQuery = [
+            'from' => [['collectionId' => $collection]],
+            'limit' => $limit,
+            'orderBy' => [
+                [
+                    'field' => ['fieldPath' => $orderBy === 'id' ? '__name__' : $orderBy],
+                    'direction' => strtoupper($direction) === 'DESC' ? 'DESCENDING' : 'ASCENDING'
+                ]
+            ]
+        ];
+
+        if (!empty($filters)) {
+            $fieldFilters = [];
+            foreach ($filters as $field => $value) {
+                $fieldFilters[] = [
+                    'fieldFilter' => [
+                        'field' => ['fieldPath' => $field],
+                        'op' => 'EQUAL',
+                        'value' => $this->convertValue($value)
+                    ]
+                ];
+            }
+
+            if (count($fieldFilters) === 1) {
+                $structuredQuery['where'] = $fieldFilters[0];
+            } else {
+                $structuredQuery['where'] = [
+                    'compositeFilter' => [
+                        'op' => 'AND',
+                        'filters' => $fieldFilters
+                    ]
+                ];
+            }
+        }
+        
+        if ($startAfter) {
+            $structuredQuery['startAt'] = [
+                'values' => array_map([$this, 'convertValue'], $startAfter),
+                'before' => false // This means "start after"
+            ];
+        }
+
         try {
-            $url = "{$this->baseUrl}/{$collection}?key={$this->apiKey}";
-            
-            // Build query parameters
-            $queryParams = [];
-            
-            // Add filters
-            if (!empty($filters)) {
-                foreach ($filters as $field => $value) {
-                    $queryParams[] = "where={$field}=" . urlencode(json_encode($this->convertToFirestoreFields([$field => $value])[$field]));
-                }
-            }
-            
-            // Add limit
-            if ($limit > 0) {
-                $queryParams[] = "pageSize={$limit}";
-            }
-            
-            // Add pagination token
-            if ($pageToken) {
-                $queryParams[] = "pageToken={$pageToken}";
-            }
-            
-            // Add ordering
-            if ($orderBy) {
-                $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
-                $queryParams[] = "orderBy={$orderBy} {$direction}";
-            }
-            
-            if (!empty($queryParams)) {
-                $url .= '&' . implode('&', $queryParams);
-            }
+            $response = $this->httpClient->post($queryUrl, [
+                'json' => ['structuredQuery' => $structuredQuery]
+            ]);
 
-            $response = $this->httpClient->get($url);
-            $result = json_decode($response->getBody()->getContents(), true);
-
+            $results = json_decode($response->getBody()->getContents(), true);
             $documents = [];
-            if (isset($result['documents'])) {
-                foreach ($result['documents'] as $document) {
+            $nextCursor = null;
+
+            foreach ($results as $result) {
+                if (isset($result['document'])) {
                     $documents[] = [
-                        'id' => basename($document['name']),
-                        'data' => $this->convertFromFirestoreFields($document['fields'] ?? []),
-                        'createTime' => $document['createTime'] ?? null,
-                        'updateTime' => $document['updateTime'] ?? null
+                        'id' => basename($result['document']['name']),
+                        'data' => $this->parseFirestoreDocument($result['document']['fields'] ?? []),
+                        'createTime' => $result['document']['createTime'] ?? null,
+                        'updateTime' => $result['document']['updateTime'] ?? null
                     ];
                 }
             }
 
-            $response = [
+            if (!empty($documents)) {
+                $lastDoc = end($documents);
+                $orderByField = $orderBy === 'id' ? 'id' : "data.{$orderBy}";
+                $cursorValue = $this->getValueFromNestedArray($lastDoc, $orderByField);
+                if ($cursorValue !== null) {
+                    $nextCursor = [$cursorValue];
+                }
+            }
+            
+            return [
                 'documents' => $documents,
-                'nextPageToken' => $result['nextPageToken'] ?? null,
-                'hasMore' => !empty($result['nextPageToken']),
-                'total' => count($documents)
+                'nextCursor' => $nextCursor
             ];
 
-            Log::info('Documents searched in Firestore (paginated)', [
-                'collection' => $collection,
-                'filters' => $filters,
-                'limit' => $limit,
-                'results_count' => count($documents),
-                'has_more' => $response['hasMore']
-            ]);
-
-            return $response;
-
         } catch (RequestException $e) {
-            Log::error('Failed to search documents in Firestore (paginated)', [
-                'collection' => $collection,
-                'filters' => $filters,
-                'limit' => $limit,
-                'error' => $e->getMessage(),
-                'response' => $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : null
-            ]);
-            
-            throw new FirestoreException('Failed to search documents (paginated): ' . $e->getMessage(), $e->getCode(), $e);
+            $errorBody = $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : null;
+            throw new FirestoreException('Failed to search documents (paginated): ' . $e->getMessage() . ' - ' . $errorBody, $e->getCode(), $e);
         }
+    }
+    
+    /**
+     * Helper to get a value from a nested array using dot notation.
+     * @param array $array
+     * @param string $key
+     * @return mixed|null
+     */
+    private function getValueFromNestedArray(array $array, string $key)
+    {
+        $keys = explode('.', $key);
+        foreach ($keys as $segment) {
+            if (!is_array($array) || !array_key_exists($segment, $array)) {
+                return null;
+            }
+            $array = $array[$segment];
+        }
+        return $array;
     }
 
     /**

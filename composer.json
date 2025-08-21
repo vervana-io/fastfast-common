@@ -11,7 +11,8 @@
     "symfony/property-access": "^7.3",
     "aws/aws-sdk-php": "^3.349",
     "illuminate/console": "^10.48",
-    "bensontrent/firestore-php": "^3.1"
+    "bensontrent/firestore-php": "^3.1",
+    "kreait/firebase-php": "^7.21"
   },
   "autoload": {
     "psr-4": {

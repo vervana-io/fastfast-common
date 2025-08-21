@@ -20,6 +20,7 @@ class FastFastCommonProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 \FastFast\Common\Console\StartWorker::class,
+                \FastFast\Common\Console\FirestoreTestCommand::class,
             ]);
         }
     }
@@ -54,6 +55,17 @@ class FastFastCommonProvider extends ServiceProvider
             $consumer = new \FastFast\Common\Consumer\Consumer();
             //$consumer->logger = $app->make('log'); // inject Laravel logger
             return $consumer;
+        });
+
+        $this->app->singleton(\FastFast\Common\Firestore\FirestoreClient::class, function ($app) {
+            $projectId = config('firebase.firestore.project_id');
+            $apiKey = config('firebase.firestore.apikey');
+            
+            if (empty($projectId) || empty($apiKey)) {
+                throw new \InvalidArgumentException('Firebase Firestore configuration is missing. Please set firebase.firestore.project_id and firebase.firestore.apikey in your config.');
+            }
+            
+            return new \FastFast\Common\Firestore\FirestoreClient($projectId, $apiKey);
         });
     }
 }

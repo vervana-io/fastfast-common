@@ -2,6 +2,7 @@
 
 namespace FastFast\Common\Notifications;
 
+use Illuminate\Support\Collection;
 use MrShan0\PHPFirestore\FirestoreClient;
 
 class Firebase
@@ -12,10 +13,12 @@ class Firebase
         $this->client = new FirestoreClient(config('firebase.firestore.project_id') ,config('firebase.firestore.apikey'));
     }
 
-    public function addDocument($collections)
+    public function addDocument(Collection $collection, $data)
     {
-        foreach ($collections as $data) {
-            $this->client->addDocument('rider_orders', $data);
-            }
+        $collection->each(function ($rider) {
+            $this->client->addDocument('rider_orders', [
+
+            ]);
+        });
     }
 }

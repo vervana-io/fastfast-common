@@ -346,6 +346,190 @@ class FirestoreUsageExample
         $this->deleteMultipleDocuments();
         echo "\n";
 
+        echo "9. Searching documents:\n";
+        $this->searchDocuments();
+        echo "\n";
+
+        echo "10. Searching documents asynchronously:\n";
+        $this->searchDocumentsAsync();
+        echo "\n";
+
+        echo "11. Searching documents with pagination:\n";
+        $this->searchDocumentsPaginated();
+        echo "\n";
+
+        echo "12. Deleting all documents by condition:\n";
+        $this->deleteAllDocuments();
+        echo "\n";
+
+        echo "13. Counting documents by condition:\n";
+        $this->countDocumentsByCondition();
+        echo "\n";
+
         echo "=== Examples completed ===\n";
+    }
+
+    /**
+     * Example: Searching documents with filters
+     */
+    public function searchDocuments(): void
+    {
+        try {
+            // Search for documents where order_id equals 1194
+            $filters = ['order_id' => 1194];
+            $results = $this->firestore->searchDocuments('notifications', $filters, 50);
+
+            echo "Search results for order_id = 1194:\n";
+            echo "Found " . count($results) . " documents\n";
+            
+            foreach ($results as $result) {
+                echo "Document ID: {$result['id']}\n";
+                echo "Order ID: {$result['data']['order_id']}\n";
+                echo "Title: {$result['data']['title']}\n";
+                echo "Status: {$result['data']['data']['status']}\n";
+                echo "---\n";
+            }
+
+        } catch (FirestoreException $e) {
+            echo "Error searching documents: " . $e->getMessage() . "\n";
+        }
+    }
+
+    /**
+     * Example: Searching documents asynchronously
+     */
+    public function searchDocumentsAsync(): void
+    {
+        try {
+            // Search for documents where rider_id equals 33
+            $filters = ['rider_id' => 33];
+            $promise = $this->firestore->searchDocumentsAsync('notifications', $filters, 25);
+
+            // Handle the promise
+            $promise->then(
+                function ($results) {
+                    echo "Async search completed for rider_id = 33:\n";
+                    echo "Found " . count($results) . " documents\n";
+                    
+                    foreach ($results as $result) {
+                        echo "Document ID: {$result['id']}\n";
+                        echo "Rider ID: {$result['data']['rider_id']}\n";
+                        echo "Title: {$result['data']['title']}\n";
+                        echo "---\n";
+                    }
+                },
+                function ($exception) {
+                    echo "Async search failed: " . $exception->getMessage() . "\n";
+                }
+            );
+
+            // Wait for completion
+            $results = $promise->wait();
+            echo "Async search finished with " . count($results) . " results\n";
+
+        } catch (FirestoreException $e) {
+            echo "Error in async search: " . $e->getMessage() . "\n";
+        }
+    }
+
+    /**
+     * Example: Searching documents with pagination
+     */
+    public function searchDocumentsPaginated(): void
+    {
+        try {
+            // Search for documents where status is 'pending'
+            $filters = ['data.status' => 'pending'];
+            $results = $this->firestore->searchDocumentsPaginated('notifications', $filters, 10);
+
+            echo "Paginated search results for status = 'pending':\n";
+            echo "Page 1: Found " . count($results['documents']) . " documents\n";
+            echo "Has more pages: " . ($results['hasMore'] ? 'Yes' : 'No') . "\n";
+            echo "Total in this page: {$results['total']}\n";
+            
+            if ($results['hasMore'] && $results['nextPageToken']) {
+                echo "Next page token: {$results['nextPageToken']}\n";
+                
+                // Get next page
+                $nextPage = $this->firestore->searchDocumentsPaginated(
+                    'notifications', 
+                    $filters, 
+                    10, 
+                    $results['nextPageToken']
+                );
+                
+                echo "Page 2: Found " . count($nextPage['documents']) . " documents\n";
+            }
+
+        } catch (FirestoreException $e) {
+            echo "Error in paginated search: " . $e->getMessage() . "\n";
+        }
+    }
+
+    /**
+     * Example: Deleting all documents by condition
+     */
+    public function deleteAllDocuments(): void
+    {
+        try {
+            // First, let's do a dry run to see what would be deleted
+            echo "=== DRY RUN: Checking what would be deleted ===\n";
+            $filters = ['order_id' => 1194];
+            
+            $dryRunResult = $this->firestore->deleteAllDocuments('notifications', $filters, 50, true);
+            
+            echo "Documents that would be deleted: {$dryRunResult['total_deleted']}\n";
+            echo "Dry run completed successfully\n\n";
+
+            // Now let's actually delete them (uncomment to test)
+            /*
+            echo "=== ACTUAL DELETION ===\n";
+            $deleteResult = $this->firestore->deleteAllDocuments('notifications', $filters, 50, false);
+            
+            echo "Total documents deleted: {$deleteResult['total_deleted']}\n";
+            echo "Errors encountered: " . count($deleteResult['errors']) . "\n";
+            
+            if (!empty($deleteResult['errors'])) {
+                echo "Error details:\n";
+                foreach ($deleteResult['errors'] as $error) {
+                    echo "- Document {$error['document_id']}: {$error['error']}\n";
+                }
+            }
+            */
+            
+            echo "Note: Actual deletion is commented out for safety. Uncomment to test real deletion.\n";
+
+        } catch (FirestoreException $e) {
+            echo "Error deleting all documents by condition: " . $e->getMessage() . "\n";
+        }
+    }
+
+    /**
+     * Example: Counting documents by condition
+     */
+    public function countDocumentsByCondition(): void
+    {
+        try {
+            // Count documents with specific order_id
+            $filters = ['order_id' => 1194];
+            $count = $this->firestore->countDocumentsByCondition('notifications', $filters);
+            
+            echo "Documents with order_id = 1194: {$count}\n";
+
+            // Count documents with pending status
+            $statusFilters = ['data.status' => 'pending'];
+            $pendingCount = $this->firestore->countDocumentsByCondition('notifications', $statusFilters);
+            
+            echo "Documents with status = 'pending': {$pendingCount}\n";
+
+            // Count documents for specific rider
+            $riderFilters = ['rider_id' => 33];
+            $riderCount = $this->firestore->countDocumentsByCondition('notifications', $riderFilters);
+            
+            echo "Documents for rider_id = 33: {$riderCount}\n";
+
+        } catch (FirestoreException $e) {
+            echo "Error counting documents by condition: " . $e->getMessage() . "\n";
+        }
     }
 }

@@ -75,6 +75,31 @@ class FirestoreTestCommand extends Command
                     $usageExample->complexDataExample();
                     break;
                     
+                case 'search':
+                    $this->info('Running search documents example...');
+                    $usageExample->searchDocuments();
+                    break;
+                    
+                case 'search-async':
+                    $this->info('Running async search documents example...');
+                    $usageExample->searchDocumentsAsync();
+                    break;
+                    
+                case 'search-paginated':
+                    $this->info('Running paginated search documents example...');
+                    $usageExample->searchDocumentsPaginated();
+                    break;
+                    
+                case 'delete-all':
+                    $this->info('Running delete all documents by condition example...');
+                    $usageExample->deleteAllDocuments();
+                    break;
+                    
+                case 'count-condition':
+                    $this->info('Running count documents by condition example...');
+                    $usageExample->countDocumentsByCondition();
+                    break;
+                    
                 case 'all':
                 default:
                     $this->info('Running all examples...');

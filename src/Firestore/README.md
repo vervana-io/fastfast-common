@@ -8,9 +8,12 @@ A comprehensive PHP client for Google Firestore using Guzzle HTTP with support f
 2. **Delete Document** - Remove documents from Firestore collections (sync & async)
 3. **Add Multiple Documents** - Bulk add documents using async approach with configurable concurrency
 4. **Delete Multiple Documents** - Bulk delete documents using async approach with configurable concurrency
-5. **Get Document** - Retrieve documents from Firestore
-6. **Update Document** - Update existing documents
-7. **Complex Data Support** - Handle nested arrays, objects, timestamps, and various data types
+5. **Delete All Documents** - Delete all documents based on field filters and conditions
+6. **Get Document** - Retrieve documents from Firestore
+7. **Update Document** - Update existing documents
+8. **Search Documents** - Search documents with filters, ordering, and pagination (sync & async)
+9. **Count Documents** - Count documents matching specific conditions
+10. **Complex Data Support** - Handle nested arrays, objects, timestamps, and various data types
 
 ## Installation
 
@@ -83,6 +86,18 @@ $result = $promise->wait(); // Wait for completion
 // Bulk async delete
 $documentIds = ['doc-1', 'doc-2', 'doc-3', 'doc-4'];
 $results = $firestore->deleteMultipleDocuments('notifications', $documentIds, 3);
+
+// Delete all documents by condition (e.g., all documents where order_id = 1194)
+$filters = ['order_id' => 1194];
+$results = $firestore->deleteAllDocuments('notifications', $filters, 100);
+
+// Dry run to see what would be deleted
+$dryRun = $firestore->deleteAllDocuments('notifications', $filters, 100, true);
+echo "Would delete {$dryRun['total_deleted']} documents";
+
+// Count documents matching conditions
+$count = $firestore->countDocumentsByCondition('notifications', $filters);
+echo "Found {$count} documents matching conditions";
 ```
 
 ### Bulk Operations (Async)
@@ -132,6 +147,27 @@ $updateData = [
 ];
 
 $result = $firestore->updateDocument('notifications', 'document-id', $updateData);
+```
+
+### Searching Documents
+
+```php
+// Search for documents with filters
+$filters = ['order_id' => 1194];
+$results = $firestore->searchDocuments('notifications', $filters, 50);
+
+// Search with ordering
+$results = $firestore->searchDocuments('notifications', $filters, 50, 'created_at', 'desc');
+
+// Async search
+$promise = $firestore->searchDocumentsAsync('notifications', $filters, 25);
+$results = $promise->wait();
+
+// Paginated search
+$results = $firestore->searchDocumentsPaginated('notifications', $filters, 10);
+if ($results['hasMore']) {
+    $nextPage = $firestore->searchDocumentsPaginated('notifications', $filters, 10, $results['nextPageToken']);
+}
 ```
 
 ### Complex Data Structures
@@ -194,6 +230,11 @@ php artisan fastfast:firestore-test --example=bulk
 php artisan fastfast:firestore-test --example=delete
 php artisan fastfast:firestore-test --example=delete-async
 php artisan fastfast:firestore-test --example=delete-bulk
+php artisan fastfast:firestore-test --example=search
+php artisan fastfast:firestore-test --example=search-async
+php artisan fastfast:firestore-test --example=search-paginated
+php artisan fastfast:firestore-test --example=delete-all
+php artisan fastfast:firestore-test --example=count-condition
 ```
 
 ## Error Handling

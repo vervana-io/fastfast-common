@@ -2,6 +2,7 @@
 
 namespace FastFast\Common\Firestore;
 
+use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Promise;
 use GuzzleHttp\Exception\GuzzleException;
@@ -544,5 +545,426 @@ class FirestoreClient
     public function getProjectId(): string
     {
         return $this->projectId;
+    }
+
+    /**
+     * Search for documents in a collection based on field filters
+     *
+     * @param string $collection
+     * @param array $filters Array of field filters ['field_name' => 'value']
+     * @param int $limit Maximum number of documents to return
+     * @param string|null $orderBy Field to order by
+     * @param string $direction 'asc' or 'desc'
+     * @return array Array of documents matching the filters
+     * @throws GuzzleException
+     */
+    public function searchDocuments(string $collection, array $filters = [], int $limit = 100, ?string $orderBy = null, string $direction = 'asc'): array
+    {
+        try {
+            $url = "{$this->baseUrl}/{$collection}?key={$this->apiKey}";
+            
+            // Build query parameters
+            $queryParams = [];
+            
+            // Add filters
+            if (!empty($filters)) {
+                foreach ($filters as $field => $value) {
+                    $queryParams[] = "where={$field}=" . urlencode(json_encode($this->convertToFirestoreFields([$field => $value])[$field]));
+                }
+            }
+            
+            // Add limit
+            if ($limit > 0) {
+                $queryParams[] = "pageSize={$limit}";
+            }
+            
+            // Add ordering
+            if ($orderBy) {
+                $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
+                $queryParams[] = "orderBy={$orderBy} {$direction}";
+            }
+            
+            if (!empty($queryParams)) {
+                $url .= '&' . implode('&', $queryParams);
+            }
+
+            $response = $this->httpClient->get($url);
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            $documents = [];
+            if (isset($result['documents'])) {
+                foreach ($result['documents'] as $document) {
+                    $documents[] = [
+                        'id' => basename($document['name']),
+                        'data' => $this->convertFromFirestoreFields($document['fields'] ?? []),
+                        'createTime' => $document['createTime'] ?? null,
+                        'updateTime' => $document['updateTime'] ?? null
+                    ];
+                }
+            }
+
+            Log::info('Documents searched in Firestore', [
+                'collection' => $collection,
+                'filters' => $filters,
+                'limit' => $limit,
+                'results_count' => count($documents)
+            ]);
+
+            return $documents;
+
+        } catch (RequestException $e) {
+            Log::error('Failed to search documents in Firestore', [
+                'collection' => $collection,
+                'filters' => $filters,
+                'error' => $e->getMessage(),
+                'response' => $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : null
+            ]);
+            
+            throw new FirestoreException('Failed to search documents: ' . $e->getMessage(), $e->getCode(), $e);
+        }
+    }
+
+    /**
+     * Search for documents asynchronously
+     *
+     * @param string $collection
+     * @param array $filters Array of field filters ['field_name' => 'value']
+     * @param int $limit Maximum number of documents to return
+     * @param string|null $orderBy Field to order by
+     * @param string $direction 'asc' or 'desc'
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function searchDocumentsAsync(string $collection, array $filters = [], int $limit = 100, ?string $orderBy = null, string $direction = 'asc'): \GuzzleHttp\Promise\PromiseInterface
+    {
+        $url = "{$this->baseUrl}/{$collection}?key={$this->apiKey}";
+        
+        // Build query parameters
+        $queryParams = [];
+        
+        // Add filters
+        if (!empty($filters)) {
+            foreach ($filters as $field => $value) {
+                $queryParams[] = "where={$field}=" . urlencode(json_encode($this->convertToFirestoreFields([$field => $value])[$field]));
+            }
+        }
+        
+        // Add limit
+        if ($limit > 0) {
+            $queryParams[] = "pageSize={$limit}";
+        }
+        
+                    // Add ordering
+            if ($orderBy) {
+                $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
+                $queryParams[] = "orderBy={$orderBy} {$direction}";
+            }
+        
+        if (!empty($queryParams)) {
+            $url .= '&' . implode('&', $queryParams);
+        }
+
+        return $this->httpClient->getAsync($url)->then(
+            function ($response) use ($collection, $filters, $limit) {
+                $result = json_decode($response->getBody()->getContents(), true);
+
+                $documents = [];
+                if (isset($result['documents'])) {
+                    foreach ($result['documents'] as $document) {
+                        $documents[] = [
+                            'id' => basename($document['name']),
+                            'data' => $this->convertFromFirestoreFields($document['fields'] ?? []),
+                            'createTime' => $document['createTime'] ?? null,
+                            'updateTime' => $document['updateTime'] ?? null
+                        ];
+                    }
+                }
+
+                Log::info('Documents searched in Firestore (async)', [
+                    'collection' => $collection,
+                    'filters' => $filters,
+                    'limit' => $limit,
+                    'results_count' => count($documents)
+                ]);
+
+                return $documents;
+            },
+            function ($exception) use ($collection, $filters) {
+                $errorMessage = $exception->getMessage();
+                $errorResponse = null;
+                
+                if ($exception instanceof RequestException && $exception->hasResponse()) {
+                    $errorResponse = $exception->getResponse()->getBody()->getContents();
+                }
+
+                Log::error('Failed to search documents in Firestore (async)', [
+                    'collection' => $collection,
+                    'filters' => $filters,
+                    'error' => $errorMessage,
+                    'response' => $errorResponse
+                ]);
+                
+                throw new FirestoreException('Failed to search documents (async): ' . $errorMessage, $exception->getCode(), $exception);
+            }
+        );
+    }
+
+    /**
+     * Search for documents with pagination support
+     *
+     * @param string $collection
+     * @param array $filters Array of field filters ['field_name' => 'value']
+     * @param int $limit Maximum number of documents to return
+     * @param string|null $pageToken Token for pagination
+     * @param string|null $orderBy Field to order by
+     * @param string $direction 'asc' or 'desc'
+     * @return array Array with documents and pagination info
+     * @throws GuzzleException
+     */
+    public function searchDocumentsPaginated(string $collection, array $filters = [], int $limit = 100, ?string $pageToken = null, ?string $orderBy = null, string $direction = 'asc'): array
+    {
+        try {
+            $url = "{$this->baseUrl}/{$collection}?key={$this->apiKey}";
+            
+            // Build query parameters
+            $queryParams = [];
+            
+            // Add filters
+            if (!empty($filters)) {
+                foreach ($filters as $field => $value) {
+                    $queryParams[] = "where={$field}=" . urlencode(json_encode($this->convertToFirestoreFields([$field => $value])[$field]));
+                }
+            }
+            
+            // Add limit
+            if ($limit > 0) {
+                $queryParams[] = "pageSize={$limit}";
+            }
+            
+            // Add pagination token
+            if ($pageToken) {
+                $queryParams[] = "pageToken={$pageToken}";
+            }
+            
+            // Add ordering
+            if ($orderBy) {
+                $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
+                $queryParams[] = "orderBy={$orderBy} {$direction}";
+            }
+            
+            if (!empty($queryParams)) {
+                $url .= '&' . implode('&', $queryParams);
+            }
+
+            $response = $this->httpClient->get($url);
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            $documents = [];
+            if (isset($result['documents'])) {
+                foreach ($result['documents'] as $document) {
+                    $documents[] = [
+                        'id' => basename($document['name']),
+                        'data' => $this->convertFromFirestoreFields($document['fields'] ?? []),
+                        'createTime' => $document['createTime'] ?? null,
+                        'updateTime' => $document['updateTime'] ?? null
+                    ];
+                }
+            }
+
+            $response = [
+                'documents' => $documents,
+                'nextPageToken' => $result['nextPageToken'] ?? null,
+                'hasMore' => !empty($result['nextPageToken']),
+                'total' => count($documents)
+            ];
+
+            Log::info('Documents searched in Firestore (paginated)', [
+                'collection' => $collection,
+                'filters' => $filters,
+                'limit' => $limit,
+                'results_count' => count($documents),
+                'has_more' => $response['hasMore']
+            ]);
+
+            return $response;
+
+        } catch (RequestException $e) {
+            Log::error('Failed to search documents in Firestore (paginated)', [
+                'collection' => $collection,
+                'filters' => $filters,
+                'limit' => $limit,
+                'error' => $e->getMessage(),
+                'response' => $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : null
+            ]);
+            
+            throw new FirestoreException('Failed to search documents (paginated): ' . $e->getMessage(), $e->getCode(), $e);
+        }
+    }
+
+    /**
+     * Delete all documents based on conditions (query + delete approach)
+     *
+     * @param string $collection
+     * @param array $filters Array of field filters ['field_name' => 'value']
+     * @param int $batchSize Maximum documents to delete in one batch
+     * @param bool $dryRun If true, only count documents that would be deleted
+     * @return array Results with count and details of deleted documents
+     * @throws GuzzleException
+     */
+    public function deleteAllDocuments(string $collection, array $filters = [], int $batchSize = 100, bool $dryRun = false): array
+    {
+        try {
+            Log::info('Starting bulk document deletion', [
+                'collection' => $collection,
+                'filters' => $filters,
+                'batch_size' => $batchSize,
+                'dry_run' => $dryRun
+            ]);
+
+            $deletedCount = 0;
+            $deletedDocuments = [];
+            $errors = [];
+            $nextPageToken = null;
+
+            do {
+                // Search for documents matching the conditions
+                $searchResults = $this->searchDocumentsPaginated(
+                    $collection, 
+                    $filters, 
+                    $batchSize, 
+                    $nextPageToken
+                );
+
+                $documents = $searchResults['documents'];
+                $nextPageToken = $searchResults['nextPageToken'];
+
+                if (empty($documents)) {
+                    break;
+                }
+
+                if ($dryRun) {
+                    // Just count documents that would be deleted
+                    $deletedCount += count($documents);
+                    foreach ($documents as $doc) {
+                        $deletedDocuments[] = [
+                            'id' => $doc['id'],
+                            'would_delete' => true
+                        ];
+                    }
+                } else {
+                    // Actually delete the documents
+                    $documentIds = array_column($documents, 'id');
+                    
+                    // Delete in batch using async approach
+                    $deleteResults = $this->deleteMultipleDocuments($collection, $documentIds, 10);
+                    
+                    foreach ($deleteResults as $result) {
+                        if ($result['status'] === 'success') {
+                            $deletedCount++;
+                            $deletedDocuments[] = [
+                                'id' => $result['document_id'],
+                                'deleted' => true
+                            ];
+                        } else {
+                            $errors[] = [
+                                'document_id' => $result['document_id'],
+                                'error' => $result['error']
+                            ];
+                        }
+                    }
+                }
+
+            } while ($nextPageToken && !$dryRun);
+
+            $result = [
+                'total_deleted' => $deletedCount,
+                'deleted_documents' => $deletedDocuments,
+                'errors' => $errors,
+                'dry_run' => $dryRun,
+                'collection' => $collection,
+                'filters_applied' => $filters
+            ];
+
+            Log::info('Bulk document deletion completed', [
+                'collection' => $collection,
+                'filters' => $filters,
+                'total_deleted' => $deletedCount,
+                'errors_count' => count($errors),
+                'dry_run' => $dryRun
+            ]);
+
+            return $result;
+
+        } catch (Exception $e) {
+            Log::error('Failed to delete all documents', [
+                'collection' => $collection,
+                'filters' => $filters,
+                'error' => $e->getMessage()
+            ]);
+            
+            throw new FirestoreException('Failed to delete all documents: ' . $e->getMessage(), $e->getCode(), $e);
+        }
+    }
+
+    /**
+     * Delete all documents by condition asynchronously
+     *
+     * @param string $collection
+     * @param array $filters Array of field filters ['field_name' => 'value']
+     * @param int $batchSize Maximum documents to delete in one batch
+     * @param bool $dryRun If true, only count documents that would be deleted
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
+    public function deleteAllDocumentsAsync(string $collection, array $filters = [], int $batchSize = 100, bool $dryRun = false): \GuzzleHttp\Promise\PromiseInterface
+    {
+        return Promise\Utils::task(function () use ($collection, $filters, $batchSize, $dryRun) {
+            return $this->deleteAllDocuments($collection, $filters, $batchSize, $dryRun);
+        });
+    }
+
+    /**
+     * Count documents matching conditions without deleting them
+     *
+     * @param string $collection
+     * @param array $filters Array of field filters ['field_name' => 'value']
+     * @return int Number of documents matching the conditions
+     * @throws GuzzleException
+     */
+    public function countDocumentsByCondition(string $collection, array $filters = []): int
+    {
+        try {
+            $count = 0;
+            $nextPageToken = null;
+            $batchSize = 1000; // Use larger batch size for counting
+
+            do {
+                $searchResults = $this->searchDocumentsPaginated(
+                    $collection, 
+                    $filters, 
+                    $batchSize, 
+                    $nextPageToken
+                );
+
+                $count += count($searchResults['documents']);
+                $nextPageToken = $searchResults['nextPageToken'];
+
+            } while ($nextPageToken);
+
+            Log::info('Document count by condition completed', [
+                'collection' => $collection,
+                'filters' => $filters,
+                'count' => $count
+            ]);
+
+            return $count;
+
+        } catch (Exception $e) {
+            Log::error('Failed to count documents by condition', [
+                'collection' => $collection,
+                'filters' => $filters,
+                'error' => $e->getMessage()
+            ]);
+            
+            throw new FirestoreException('Failed to count documents by condition: ' . $e->getMessage(), $e->getCode(), $e);
+        }
     }
 }

@@ -20,7 +20,8 @@ class FirestoreClient
     {
         $this->projectId = $projectId;
         $this->apiKey = $apiKey;
-        //https://firestore.googleapis.com/v1/
+        //https://firestore.googleapis.com/v1/projects/{$projectId}/databases/(default)/documents:runQuery
+        //https://firestore.googleapis.com/v1/projects/fastfast-ab3b0/databases/(default)/documents:runQuery
         $this->baseUrl = "https://firestore.googleapis.com/v1/projects/{$projectId}/databases/$db/documents";
         
         $this->httpClient = new Client([
@@ -617,7 +618,7 @@ class FirestoreClient
      */
     public function searchDocuments(string $collection, array $filters = [], int $limit = 100, int $offset = 0, ?string $orderBy = null, string $direction = 'asc'): array
     {
-        $queryUrl = rtrim(dirname($this->baseUrl), '/') . ':runQuery';
+        $queryUrl = rtrim($this->baseUrl, '/') . ':runQuery';
 
         $structuredQuery = [
             'from' => [['collectionId' => $collection]],
@@ -738,7 +739,7 @@ class FirestoreClient
             throw new \InvalidArgumentException('The "orderBy" parameter is required for paginated searches.');
         }
 
-        $queryUrl = rtrim(dirname($this->baseUrl), '/') . ':runQuery';
+        $queryUrl = rtrim($this->baseUrl, '/') . ':runQuery';
 
         $structuredQuery = [
             'from' => [['collectionId' => $collection]],

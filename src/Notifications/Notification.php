@@ -9,6 +9,7 @@ use App\Models\Personnel;
 use App\Models\User;
 use App\Notifications\OrderStatusNotification;
 use Carbon\Carbon;
+use FastFast\Common\Firestore\FirestoreClient;
 use Kreait\Firebase\Exception\FirebaseException;
 use Kreait\Firebase\Exception\MessagingException;
 use Kreait\Firebase\Factory;
@@ -25,6 +26,14 @@ class Notification {
     {
         $client = new CustomAPNNotification($type);
         return $client->sendNotification($user, $data);
+    }
+
+    public function sendToFirestore($collection, $docs)
+    {
+        $store = app(FirestoreClient::class);
+
+        return $store->addMultipleDocuments($collection,$docs);
+
     }
 
     private function getFirebaseInstance()

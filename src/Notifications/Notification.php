@@ -49,7 +49,7 @@ class Notification {
                 $messages[] = $cm->toToken($token);
             }
         }
-        $fcm->sendAll($messages);
+        $fcm->sendAll($messages)->validTokens();
     }
     public function sendUserAPNS($data, User $user, $type = 'customer')
     {

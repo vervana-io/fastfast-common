@@ -10,7 +10,8 @@
     "react/promise": "^3.2",
     "symfony/property-access": "^7.3",
     "aws/aws-sdk-php": "^3.349",
-    "illuminate/console": "^10.48"
+    "illuminate/console": "^10.48",
+    "bensontrent/firestore-php": "^3.1"
   },
   "autoload": {
     "psr-4": {

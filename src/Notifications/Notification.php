@@ -275,7 +275,7 @@ class Notification {
             if (count($device_tokens) > 0) {
                 $device_token = $device_tokens[0];
                 $notification = $this->generateFirebaseNotification($title, $body);
-                $message = CloudMessage::withTarget('token', $user->device_token)->withNotification($notification);
+                $message = CloudMessage::new()->toToken($device_token)->withNotification($notification);
                 if (count($data) > 0) {
                     $message = $message->withData($data);
                 }

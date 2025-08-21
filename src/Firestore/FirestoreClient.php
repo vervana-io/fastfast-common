@@ -393,6 +393,11 @@ class FirestoreClient
      */
     private function convertValue($value): array
     {
+        // Check if the value is a document reference path
+        if (is_string($value) && strpos($value, 'projects/') === 0 && strpos($value, '/databases/') !== false && strpos($value, '/documents/') !== false) {
+            return ['referenceValue' => $value];
+        }
+
         if (is_array($value)) {
             if ($this->isSequentialArray($value)) {
                 // Handle array of values
@@ -671,6 +676,7 @@ class FirestoreClient
                 if (isset($result['document'])) {
                     $documents[] = [
                         'id' => basename($result['document']['name']),
+                        'name' => $result['document']['name'],
                         'data' => $this->parseFirestoreDocument($result['document']['fields'] ?? []),
                         'createTime' => $result['document']['createTime'] ?? null,
                         'updateTime' => $result['document']['updateTime'] ?? null
@@ -796,6 +802,7 @@ class FirestoreClient
                 if (isset($result['document'])) {
                     $documents[] = [
                         'id' => basename($result['document']['name']),
+                        'name' => $result['document']['name'],
                         'data' => $this->parseFirestoreDocument($result['document']['fields'] ?? []),
                         'createTime' => $result['document']['createTime'] ?? null,
                         'updateTime' => $result['document']['updateTime'] ?? null
@@ -805,10 +812,14 @@ class FirestoreClient
 
             if (!empty($documents)) {
                 $lastDoc = end($documents);
-                $orderByField = $orderBy === 'id' ? 'id' : "data.{$orderBy}";
-                $cursorValue = $this->getValueFromNestedArray($lastDoc, $orderByField);
-                if ($cursorValue !== null) {
-                    $nextCursor = [$cursorValue];
+                if ($orderBy === 'id') {
+                    $nextCursor = [$lastDoc['name']];
+                } else {
+                    $orderByField = "data.{$orderBy}";
+                    $cursorValue = $this->getValueFromNestedArray($lastDoc, $orderByField);
+                    if ($cursorValue !== null) {
+                        $nextCursor = [$cursorValue];
+                    }
                 }
             }
             

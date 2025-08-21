@@ -864,19 +864,21 @@ class FirestoreClient
             $deletedCount = 0;
             $deletedDocuments = [];
             $errors = [];
-            $nextPageToken = null;
+            $startAfter = null;
 
             do {
-                // Search for documents matching the conditions
+                // Search for documents matching the conditions to get a batch to delete
                 $searchResults = $this->searchDocumentsPaginated(
                     $collection, 
                     $filters, 
                     $batchSize, 
-                    $nextPageToken
+                    $startAfter,
+                    'id', // Order by document ID for stable pagination
+                    'asc'
                 );
 
                 $documents = $searchResults['documents'];
-                $nextPageToken = $searchResults['nextPageToken'];
+                $startAfter = $searchResults['nextCursor'];
 
                 if (empty($documents)) {
                     break;
@@ -914,7 +916,7 @@ class FirestoreClient
                     }
                 }
 
-            } while ($nextPageToken && !$dryRun);
+            } while ($startAfter);
 
             $result = [
                 'total_deleted' => $deletedCount,

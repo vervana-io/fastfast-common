@@ -5,13 +5,14 @@ namespace FastFast\Common\Order;
 
 use App\Jobs\NotifyAvailableRiders;
 use App\Models\Rider;
+use App\Models\Order;
 use FastFast\Common\Firestore\FirestoreClient;
 use FastFast\Common\Notifications\APNotification;
 use FastFast\Common\Notifications\CustomAPNNotification;
 use FastFast\Common\Notifications\FirebaseNotification;
+use FastFast\Common\Notifications\NotificationSender;
 use FastFast\Common\Notifications\PusherNotification;
 use FastFast\Common\Service\FFOrderService;
-use FastFast\Common\Service\Order;
 use Illuminate\Database\Eloquent\Builder;
 use Pusher\ApiErrorException;
 use Pusher\PusherException;
@@ -19,6 +20,7 @@ use Pusher\PusherException;
 class RiderOrderService implements FFOrderService
 {
 
+    private NotificationSender $sender;
     public function __construct(
         private FirestoreClient $firestore,
         private PusherNotification $pusher,
@@ -95,6 +97,37 @@ class RiderOrderService implements FFOrderService
         }
     }
 
+    public function send($order)
+    {
+
+
+    }
+    public function accepted(Order $order)
+    {
+        //send to seller, customer,admin
+        $customer = $order->customer;
+        $seller = $order->seller;
+        $rider = $order->rider;
+        $title = 'Delivery Acceptance';
+        $body = "$rider->full_name has accepted the request to deliver the order $order->reference and is on the way.";
+        //$customer_user_id = $customer->user_id;
+        $data = [
+            'user_id' => $customer->user_id,
+            'order_id' => $order->id,
+            'title' => $title,
+            'body' => $body
+        ];
+
+        $sellerAndroidDevices = $this->fcm->getToken($seller->user);
+        $sellerIosDevices = $this->fcm->getToken($seller->user, 'ios');
+        $customerAndroidDevices = $this->fcm->getToken($customer->user,);
+        $customerIosDevices = $this->fcm->getToken($customer->user, 'ios');
+        $fcmDevices = collect()->push($sellerAndroidDevices)->push($customerAndroidDevices)->toArray();
+        $apnDevices = collect()->push($sellerIosDevices)->push($customerIosDevices)->toArray();
+        $this->fcm->sendUserMessage($fcmDevices, $data, $title, $body);
+        $this->apns->sendUserMessage($apnDevices,$data, $title, $body);
+        $this->pusher->sendMessage($data, 'rider_delivery_accept');
+    }
 
     /**
      * @throws PusherException
@@ -168,17 +201,17 @@ class RiderOrderService implements FFOrderService
             ->get();
     }
 
-    public function created(Order $order)
+    public function created(Order $order, $tranxn)
     {
         // TODO: Implement created() method.
     }
 
-    public function verified(Order $order)
+    public function verified(Order $order, $transId)
     {
         // TODO: Implement verified() method.
     }
 
-    public function canceled(Order $order)
+    public function canceled(Order $order, $transId, $reason)
     {
         // TODO: Implement canceled() method.
     }

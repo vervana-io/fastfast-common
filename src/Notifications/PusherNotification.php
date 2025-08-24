@@ -83,9 +83,14 @@ class PusherNotification
      * @throws ApiErrorException
      * @throws GuzzleException
      */
-    public function sendUserMessage($user, $data, $event, $channel): object
+    public function sendUserMessage($user, $data, $event, $channel = 'FastFast'): object
     {
         $channel = "$channel.$user->id";
+        return $this->pusher->trigger($event, $data, $channel);
+    }
+
+    public function sendMessage($data, $event, $channel = 'FastFast')
+    {
         return $this->pusher->trigger($event, $data, $channel);
     }
 }

@@ -91,7 +91,7 @@ class CustomerOrderService implements FFOrderService
         ]);
 
     }
-    public function approved(Order $order)
+    public function approved(Order $order, $exclude = [])
     {
         //TODO: handle seller approve other for customer
         Log::info('Order '. $order->id . 'approved', $order->toArray());

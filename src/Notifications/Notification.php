@@ -2,6 +2,7 @@
 
 namespace FastFast\Common\Notifications;
 
+use Exception;
 use App\Models\Admin;
 use App\Models\Notification as Model_Notification;
 use App\Models\Order;
@@ -52,6 +53,10 @@ class Notification {
         }
         $fcm->sendAll($messages)->validTokens();
     }
+
+    /**
+     * @throws Exception
+     */
     public function sendUserAPNS($data, User $user, $type = 'customer')
     {
         $client = new CustomAPNNotification($type);

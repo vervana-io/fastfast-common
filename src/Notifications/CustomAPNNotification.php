@@ -86,4 +86,10 @@ class CustomAPNNotification
           $client->push();
       }
   }
+
+  public function sendAllMessages($data)
+  {
+
+
+  }
 }

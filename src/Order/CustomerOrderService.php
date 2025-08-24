@@ -16,7 +16,7 @@ class CustomerOrderService implements FFOrderService
     private NotificationSender $sender;
     public function __construct()
     {
-
+        $this->sender = app(NotificationSender::class);
     }
 
     public function created( $order, $tranxn)

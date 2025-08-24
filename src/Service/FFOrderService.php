@@ -12,7 +12,7 @@ interface FFOrderService
 
     public function verified(Order $order, $transId);
 
-    public function approved(Order $order);
+    public function approved(Order $order, $exclude = []);
 
     public function canceled(Order $order, $transId, $reason);
 

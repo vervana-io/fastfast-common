@@ -38,8 +38,8 @@ class SellerOrderService implements FFOrderService
                 'body' => $body
             ];
             $not_data['seller_id'] = $order->seller_id;
-            $this->send_user_order_cancel_email($user, $order);
-            return $this->sender->sendNotification($user, $not_data, $title, $body, 'order_canceled', 'canceled');
+            //$this->send_user_order_cancel_email($user, $order);
+            //return $this->sender->sendNotification($user, $not_data, $title, $body, 'order_canceled', 'canceled');
 
     }
 

@@ -41,11 +41,11 @@ class CustomerOrderService implements FFOrderService
         $this->sender->createNotification($not_data);
         $not_data['seller_id'] = $seller->id;
         $this->sender->sendNotification($seller->user, $not_data, [
-            'title' => $title, 'body' => $body,
-                'event' => 'seller_new_order',
-                'status' => 'created',
-            ]
-        );
+            'title' => $title,
+            'body' => $body,
+            'event' => 'seller_new_order',
+            'status' => 'created',
+        ]);
     }
 
     public function verified(Order $order, $transId,)

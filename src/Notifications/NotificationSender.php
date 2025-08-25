@@ -44,7 +44,7 @@ class NotificationSender
             $type = $user->user_type == 1 ? 'customer' : ($user->user_type == 3 ? 'rider' : 'seller');
             $results['apns'] = $this->apns->sendUserMessage($type,$this->getToken($user, 'ios'), $data, $title, $body);
         }
-        $results['pusher'] = $this->pusher->sendUserMessage($user,$data, $metadata['event'], $metadata['channel']);
+        $results['pusher'] = $this->pusher->sendUserMessage($user,$data, $metadata['event'], $metadata['channel'] ?? 'FastFast');
 
         return $results;
     }

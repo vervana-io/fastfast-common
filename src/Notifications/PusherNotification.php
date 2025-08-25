@@ -86,11 +86,11 @@ class PusherNotification
     public function sendUserMessage($user, $data, $event, $channel = 'FastFast'): object
     {
         $channel = "$channel.$user->id";
-        return $this->pusher->trigger($event, $data, $channel);
+        return $this->pusher->trigger($channel, $event, $data, $channel);
     }
 
     public function sendMessage($data, $event, $channel = 'FastFast')
     {
-        return $this->pusher->trigger($event, $data, $channel);
+        return $this->pusher->trigger($channel, $event, $data, $channel);
     }
 }

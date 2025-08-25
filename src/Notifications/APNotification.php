@@ -62,8 +62,11 @@ class APNotification
 
         return $results;
     }
-    public function getToken(User $user, $type = 'ios') {
-        $devices = $user->devices->collect();
+    public function getToken(User $user, $type = 'android') {
+        $devices = $user->devices?->collect();
+        if (!$devices) {
+            return [];
+        }
         if ($user->device_token && $user->device_type == $type) {
             $devices->push([
                 'token' => $user->device_token,

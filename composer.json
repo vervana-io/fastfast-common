@@ -32,5 +32,8 @@
         "FastFast\\Common\\FastFastCommonProvider"
       ]
     }
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^12.3"
   }
 }

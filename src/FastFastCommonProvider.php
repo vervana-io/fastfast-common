@@ -65,7 +65,7 @@ class FastFastCommonProvider extends ServiceProvider
 
         $this->app->singleton(\FastFast\Common\Firestore\FirestoreClient::class, function ($app) {
             $projectId = config('firebase.firestore.project_id');
-            $apiKey = config('firebase.firestore.apikey');
+            $apiKey = config('firebase.firestore.apiKey');
             $database = config('firebase.firestore.database', '(default)');
             
             if (empty($projectId) || empty($apiKey)) {

@@ -6,7 +6,7 @@ use FastFast\Common\Service\FFOrderService;
 use App\Models\Order;
 use App\Models\Rider;
 
-class SellerOrderService implements FFOrderService
+class SellerOrderService extends OrderService implements FFOrderService
 {
 
     public function created(Order $order, $tranxn)
@@ -19,9 +19,9 @@ class SellerOrderService implements FFOrderService
         // TODO: Implement verified() method.
     }
 
-    public function approved(Order $order)
+    public function approved(Order $order, $exclude = [])
     {
-        // TODO: Implement approved() method.
+        return $this->sender->sendOrderApprovedNotification($order, $exclude);
     }
 
     public function canceled(Order $order, $transId, $reason)

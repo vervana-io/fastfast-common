@@ -2,103 +2,52 @@
 
 namespace FastFast\Common\Notifications;
 
-use Pushok\AuthProvider;
-use Pushok\Client;
+use App\Models\User;
 use Pushok\InvalidPayloadException;
-use Pushok\Notification;
-use Pushok\Payload;
-use Pushok\Payload\Alert;
+use Exception;
 
 class APNotification
 {
-    private $options;
-    private Client $client;
 
-    public function __construct($user_type = "seller")
+    public function push($devices, $data, $title, $body)
     {
-        $app_bundle_id = match ($user_type) {
-            'seller' => config('broadcasting.connections.apn.seller_bundle_id'),
-            'rider' => config('broadcasting.connections.apn.rider_bundle_id'),
-            'customer' => config('broadcasting.connections.apn.customer_bundle_id'),
-            default => config('broadcasting.connections.apn.seller_bundle_id'),
-        };
-
-        $this->options = [
-            'key_id' => config('broadcasting.connections.apn.key_id'),
-            'team_id' => config('broadcasting.connections.apn.team_id'),
-            'app_bundle_id' => $app_bundle_id,
-            'private_key_path' => config('broadcasting.connections.apn.private_key_path'),
-            'production' => match ($user_type) {
-                'seller' => true,
-                default => config('broadcasting.connections.apn.production')
-            },
-        ];
-        $authProvider = AuthProvider\Token::create($this->options);
-        $this->client = new Client($authProvider, $this->options['production']);
-    }
-
-    /**
-     * @throws InvalidPayloadException
-     */
-    public function sendAll($data, $title, $body)
-    {
-        $alert = Alert::create()
-            ->setTitle($title)
-            ->setBody($body);
-
-        $payload = Payload::create()
-            ->setAlert($alert);
-        $payload->setSound('default');
-        $payload->setCustomValue('type', $title);
-        foreach ($data as $item) {
-            $payload->setCustomValue('data', $data['message']);
-            foreach ($item['tokens'] as $token) {
-                $this->client->addNotification(new Notification($payload, $token));
-            }
+        $results = [];
+        foreach ($devices as $device) {
+            $tokens = $device['tokens'];
+            $results[] = $this->sendUserMessage($device['userType'], $tokens, $data, $title, $body);
         }
-
-        $this->client->push();
+        return $results;
     }
-
     /**
      * @throws InvalidPayloadException
-     * @throws \Exception
+     * @throws Exception
      */
-    public function sendUserMessage($tokens, $data, $title, $body): array
+    public function sendUserMessage($type, $tokens, $data, $title, $body): array
     {
-        $alert = Alert::create()
-            ->setTitle($title)
-            ->setBody($body);
-
-        $payload = Payload::create()
-            ->setAlert($alert);
-        $payload->setSound('default');
-        $payload->setCustomValue('type', $title);
-        $payload->setCustomValue('data', $data);
-        foreach ($tokens as $token) {
-            $this->client->addNotification(new Notification($payload, $token));
-        }
-        return $this->client->push();
+        $data['title'] = $title;
+        $data['body'] = $body;
+        $apn = new CustomAPNNotification($type);
+        return $apn->sendMultiDeviceNotification($tokens, $data);
     }
 
     /**
      * @throws InvalidPayloadException
-     * @throws \Exception
+     * @throws Exception
      */
     public function sendRidersNotifications($order, $riders, $requests, $data, $metadata): array
     {
         $title = $metadata['title'];
         $body = $metadata['body'];
-        $alert = Alert::create()
-            ->setTitle($title)
-            ->setBody($body);
+        $notification = [
+            'title' => $title,
+            'body' => $body,
+        ];
 
-        $payload = Payload::create()
-            ->setAlert($alert);
-        $payload->setSound('default');
-        $payload->setCustomValue('type', $title);
+        $results = [];
+        //TODO: to make this parallel
         foreach ($riders as $rider) {
-            $payload->setCustomValue('data', [
+            $tokens = $this->getToken($rider->user);
+            $notification[] = [
                 'user_id' => $rider->user_id,
                 'order_id' => $order->id,
                 'rider_id' => $rider->id,
@@ -106,13 +55,12 @@ class APNotification
                 'title' => $title,
                 'body' => $body,
                 'data' => json_encode($data),
-            ]);
-            $tokens = $this->getToken($rider, 'ios');
-            foreach ($tokens as $token) {
-                $this->client->addNotification(new Notification($payload, $token));
-            }
+            ];
+            $apn = new CustomAPNNotification('rider');
+            $results[$rider->id] = $apn->sendMultiDeviceNotification($tokens, $notification);
         }
-        return $this->client->push();
+
+        return $results;
     }
     public function getToken(User $user, $type = 'ios') {
         $devices = $user->devices->collect();

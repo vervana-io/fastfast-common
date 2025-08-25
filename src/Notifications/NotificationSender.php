@@ -41,8 +41,8 @@ class NotificationSender
         $results['fcm'] =$this->fcm->sendUserMessage($this->getToken($user), $data, $title, $body);
         $ios = $this->getToken($user, 'ios');
         if (!empty($ios)) {
-            $apns = new APNotification($user->user_type == 1 ? 'customer' : ($user->user_type == 3 ? 'rider' : 'seller'));
-            $results['apns'] = $apns->sendUserMessage($this->getToken($user, 'ios'), $data, $title, $body);
+            $type = $user->user_type == 1 ? 'customer' : ($user->user_type == 3 ? 'rider' : 'seller');
+            $results['apns'] = $this->apns->sendUserMessage($type,$this->getToken($user, 'ios'), $data, $title, $body);
         }
         $results['pusher'] = $this->pusher->sendUserMessage($user,$data, $metadata['event'], $metadata['channel']);
 
@@ -69,11 +69,16 @@ class NotificationSender
             $androidDevices = $this->getToken($user);
             $iosDevices = $this->getToken($user, 'ios');
             $fcmDevices->push($androidDevices);
-            $apnDevices->push($iosDevices);
+
+            $apnDevices->push([
+                'tokens' => $iosDevices,
+                'userType' => $user->user_type == 1 ? 'customer' : ($user->user_type == 3 ? 'rider' : 'seller'),
+                'id' => $user->id,
+            ]);
         }
 
         $this->fcm->sendUserMessage($fcmDevices->toArray(), $data, $title, $body);
-        $this->apns->sendUserMessage($apnDevices->toArray(),$data, $title, $body);
+        $this->apns->push($apnDevices->toArray(),$data, $title, $body);
         $this->pusher->sendMessage($data, $event);
     }
 
@@ -138,9 +143,10 @@ class NotificationSender
                 'reference' => $order->reference,
             ];
             $primary_address = $seller->primary_address;
-            $this->notifyRiders($order, $order_info, $primary_address, 1000);
+            return $this->notifyRiders($order, $order_info, $primary_address, 1000);
 
         }catch (\Exception $e) {
+            throw $e;
         }
     }
 
@@ -182,12 +188,13 @@ class NotificationSender
             'body' => $body
         ];
 
-        $this->firestore->addRiderOrderDocuments($order, $riders, $requests, $data, $metadata);
-        $this->pusher->sendRidersNotifications($order, $riders, $requests, $data, $metadata);
-        $this->fcm->sendRidersNotifications($order, $riders, $requests, $data, $metadata);
-        $this->apns->sendRidersNotifications($order, $riders, $requests, $data, $metadata );
+        $response = [];
+        $response['firestore'] = $this->firestore->addRiderOrderDocuments($order, $riders, $requests, $data, $metadata);
+        $response['pusher'] = $this->pusher->sendRidersNotifications($order, $riders, $requests, $data, $metadata);
+        $response['fcm'] = $this->fcm->sendRidersNotifications($order, $riders, $requests, $data, $metadata);
+        $response['apns'] = $this->apns->sendRidersNotifications($order, $riders, $requests, $data, $metadata );
 
-        return true;
+        return $response;
     }
 
     public function getNearestRiders($id, $latitude, $longitude, $distance = 5, $excludes = [], $prodTest = false)

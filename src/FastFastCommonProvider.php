@@ -75,7 +75,10 @@ class FastFastCommonProvider extends ServiceProvider
             return new \FastFast\Common\Firestore\FirestoreClient($projectId, $apiKey, $database);
         });
         $this->app->singleton(NotificationSender::class, function ($app) {
-            return new NotificationSender($app->make(PusherNotification::class), $app->make(FirebaseNotification::class));
+            return new NotificationSender(
+                $app->make(FirestoreClient::class),
+                $app->make(PusherNotification::class),
+                $app->make(FirebaseNotification::class),$app->make(APNotification::class));
         });
     }
 }

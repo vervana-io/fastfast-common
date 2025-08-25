@@ -148,9 +148,11 @@ class RiderOrderService extends OrderService implements FFOrderService
         }
     }
 
+    /**
+     * @throws \Exception
+     */
     public function approved(Order $order, $exclude = [])
     {
-        // TODO: Implement approved() method.
         return $this->sender->sendOrderApprovedNotification($order, $exclude);
     }
 }

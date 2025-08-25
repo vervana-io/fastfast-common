@@ -65,7 +65,7 @@ class CustomAPNNotification
   }
 
 
-  public function sendMultiDeviceNotification($deviceTokens, $data)
+  public function sendMultiDeviceNotification($deviceTokens, $data): array
   {
       $authProvider = AuthProvider\Token::create($this->options);
       $client = new Client($authProvider, $this->options['production']);
@@ -83,8 +83,8 @@ class CustomAPNNotification
       foreach ($deviceTokens as $token) {
           $notification = new Notification($payload, $token);
           $client->addNotification($notification);
-          $client->push();
       }
+      return $client->push();
   }
 
   public function sendAllMessages($data)

@@ -104,33 +104,34 @@ class CustomerOrderService implements FFOrderService
     public function approved(Order $order, $exclude = []): mixed
     {
         //TODO: handle seller approve other for customer
-        Log::info('Order '. $order->id . 'approved', $order->toArray());
-        return true;
+        return false;
+    }
+
+    public function ready(Order $order): mixed
+    {
+        // TODO: Implement verified() method.
+        return false;
     }
 
 
-
-    public function ready(Order $order)
+    public function delivered(Order $order): mixed
     {
         // TODO: Implement verified() method.
-    }
-
-
-    public function delivered(Order $order)
-    {
-        // TODO: Implement verified() method.
+        return false;
     }
     private function pickup(Order $order)
     {
         // TODO: Implement verified() method.
     }
-    public function rejected(Order $order, Rider $rider)
+    public function rejected(Order $order, Rider $rider): mixed
     {
         // TODO: Implement verified() method.
+        return true;
     }
 
-    private function arrived(Order $order, $place)
+    private function arrived(Order $order, $place): mixed
     {
         // TODO: Implement verified() method.
+        return true;
     }
 }

@@ -10,6 +10,8 @@ use FastFast\Common\Notifications\NotificationSender;
 use FastFast\Common\Service\FFOrderService;
 use Illuminate\Support\Facades\Log;
 use App\Models\Order;
+use Kreait\Firebase\Exception\FirebaseException;
+use Kreait\Firebase\Exception\MessagingException;
 
 class CustomerOrderService implements FFOrderService
 {
@@ -19,7 +21,11 @@ class CustomerOrderService implements FFOrderService
         $this->sender = app(NotificationSender::class);
     }
 
-    public function created( $order, $tranxn)
+    /**
+     * @throws MessagingException
+     * @throws FirebaseException
+     */
+    public function created($order, $tranxn): mixed
     {
         //send to seller and admin
         $title = 'New Order';
@@ -40,7 +46,7 @@ class CustomerOrderService implements FFOrderService
         ];
         $this->sender->createNotification($not_data);
         $not_data['seller_id'] = $seller->id;
-        $this->sender->sendNotification($seller->user, $not_data, [
+        return $this->sender->sendNotification($seller->user, $not_data, [
             'title' => $title,
             'body' => $body,
             'event' => 'seller_new_order',
@@ -48,19 +54,23 @@ class CustomerOrderService implements FFOrderService
         ]);
     }
 
-    public function verified(Order $order, $transId,)
+    /**
+     * @throws MessagingException
+     * @throws FirebaseException
+     */
+    public function verified(Order $order, $transId): mixed
     {
         $title = 'Order Verify';
         $body = 'Order ' . $order->reference . " has been verified";
         $seller = $order->seller;
         $data = [
             'user_id' => $seller->id,
-            'order_id' => $order,
+            'order_id' => $order->id,
             'transaction_id' => $transId,
             'title' => $title,
             'body' => $body
         ];
-        $this->sender->sendNotification($seller->user, $data, [
+        return $this->sender->sendNotification($seller->user, $data, [
             'title' => $title,
             'body' => $body,
             'event' => 'verify_order',
@@ -69,7 +79,7 @@ class CustomerOrderService implements FFOrderService
     }
 
 
-    public function canceled(Order $order, $transction, $reason)
+    public function canceled(Order $order, $transction, $reason): mixed
     {
         //send to admin, seller
         $title = 'Order Cancellation';
@@ -91,7 +101,7 @@ class CustomerOrderService implements FFOrderService
         ]);
 
     }
-    public function approved(Order $order, $exclude = [])
+    public function approved(Order $order, $exclude = []): mixed
     {
         //TODO: handle seller approve other for customer
         Log::info('Order '. $order->id . 'approved', $order->toArray());

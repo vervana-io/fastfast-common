@@ -8,16 +8,16 @@ use App\Models\Group_Order;
 interface FFOrderService
 {
 
-    public function created(Order $order, $tranxn);
+    public function created(Order $order, $tranxn): mixed;
 
-    public function verified(Order $order, $transId);
+    public function verified(Order $order, $transId): mixed;
 
-    public function approved(Order $order, $exclude = []);
+    public function approved(Order $order, $exclude = []): mixed;
 
-    public function canceled(Order $order, $transId, $reason);
+    public function canceled(Order $order, $transId, $reason): mixed;
 
-    public function rejected(Order $order, Rider $rider);
+    public function rejected(Order $order, Rider $rider): mixed;
 
-    public function delivered(Order $order);
+    public function delivered(Order $order): mixed;
 }
 

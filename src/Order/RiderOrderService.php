@@ -41,118 +41,60 @@ class RiderOrderService extends OrderService implements FFOrderService
         ], $data, $title, $body, 'rider_delivery_accept');
     }
 
-    public function created(Order $order, $tranxn)
+    public function created(Order $order, $tranxn): mixed
     {
-        // TODO: Implement created() method.
+        throw new \Exception(
+            'Rider cannot create an order');
     }
 
-    public function verified(Order $order, $transId)
+    public function verified(Order $order, $transId): mixed
     {
-        // TODO: Implement verified() method.
+        throw new \Exception(
+            'Rider cannot verify an order');
     }
 
-    public function canceled(Order $order, $transId, $reason)
+    public function canceled(Order $order, $transId, $reason): mixed
     {
-        // TODO: Implement canceled() method.
+        throw new \Exception(
+            'Rider cannot cancel an order');
     }
 
-    public function rejected(Order $order, $rider)
+    public function rejected(Order $order, $rider): mixed
     {
         return $this->approved($order, [$rider->id]);
     }
 
-    public function delivered(Order $order)
+    public function delivered(Order $order): mixed
     {
-        // TODO: Implement delivered() method.
+        return false;
     }
 
-    public function ready(Order $order)
+
+    public function ready(Order $order): mixed
     {
-        try {
-
-            $seller = $order->seller;
-            $rider = $order->rider;
-            if(!$rider) {
-                $this->info('Order has no rider');
-                return true;
-            }
-            $order_products = [];
-            $ordp = $order->order_products;
-            if ($ordp->count() > 0) {
-                foreach ($ordp as $ord) {
-                    $order_products[] = [
-                        'Quantity' => $ord->quantity,
-                        'name' => $ord->product->title,
-                    ];
-                }
-            }
-            $customer_address = [];
-            if ($order->is_gift == 1) {
-                $customer_address = [
-                    'city' => $order->receiver_city,
-                    'house_number' => $order->receiver_house_number,
-                    'latitude' => $order->receiver_latitude,
-                    'longitude' => $order->receiver_longitude,
-                    'street' => $order->receiver_street,
-                ];
-            } else {
-                $address = $order->address;
-                $customer_address = [
-                    'city' => $address?->city,
-                    'house_number' => $address?->house_number,
-                    'latitude' => $address?->latitude,
-                    'longitude' => $address?->longitude,
-                    'street' => $address?->street,
-                ];
-            }
-            $seller_primary_address = $seller->primary_address;
-            $seller_address = "";
-            $seller_addr_arr = [];
-            if (!is_null($seller_primary_address)) {
-                $seller_addr_arr = [
-                    'city' => $seller_primary_address->address,
-                    'house_number' => $seller_primary_address->house_number,
-                    'latitude' => $seller_primary_address->latitude,
-                    'longitude' => $seller_primary_address->longitude,
-                    'street' => $seller_primary_address->street,
-                    'nearest_bus_stop' => $seller_primary_address->nearest_bus_stop,
-                ];
-                $seller_address = $seller_primary_address->house_number . " " . $seller_primary_address->street . " ";
-            }
-            $order_info = [
-                'notification_name' => 'order_pickup',
-                'status' => $order->status,
-                'address' => $seller_addr_arr,
-                'customer_address' => $customer_address,
-                'amount' => $order->total_amount,
-                'sub_total' => $order->sub_total,
-                'delivery_fee' => $order->delivery_fee,
-                'order_id' => $order->id,
-                'orders' => $order_products,
-                'title' => $seller->name . " has an order",
-                "trading_name" => $seller->trading_name,
-            ];
-            $title = 'Order Pick Up';
-            $body = "Order $order->reference for $seller->name at $seller_address is ready for pick up";
-            $main_data = [
-                'user_id' => $rider->user_id,
-                'order_id' => $order->id,
-                'rider_id' => $rider->id,
-                'title' => $title,
-                'body' => $body,
-                'data' => json_encode($order_info),
-            ];
-
-        }catch (\Exception $e) {
-            return false;
-        }
+        throw new \Exception('Rider cannot mark order as ready');
     }
 
     /**
      * @throws \Exception
      */
-    public function approved(Order $order, $exclude = [])
+    public function approved(Order $order, $exclude = []): mixed
     {
         return $this->sender->sendOrderApprovedNotification($order, $exclude);
+    }
+    private function pickup(Order $order)
+    {
+        return false;
+    }
+
+    private function arrived(Order $order, $place): mixed
+    {
+
+        return true;
+    }
+
+    public function delayed(Order $order): mixed
+    {
+        return false;
     }
 }

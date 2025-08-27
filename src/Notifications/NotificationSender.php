@@ -34,11 +34,11 @@ class NotificationSender
      */
     public function sendNotification(User $user, $data, $metadata )
     {
-        $this->createNotification($data);
+        //$this->createNotification($data);
         $title = $metadata['title'];
         $body =  $metadata['body'];
         $results = [];
-        $results['fcm'] =$this->fcm->sendUserMessage($this->getToken($user), $data, $title, $body);
+        $fcm =$this->fcm->sendUserMessage($this->getToken($user), $data, $title, $body);
         $ios = $this->getToken($user, 'ios');
         if (!empty($ios)) {
             $type = $user->user_type == 1 ? 'customer' : ($user->user_type == 3 ? 'rider' : 'seller');

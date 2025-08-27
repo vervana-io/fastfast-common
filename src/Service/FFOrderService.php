@@ -19,5 +19,7 @@ interface FFOrderService
     public function rejected(Order $order, Rider $rider): mixed;
 
     public function delivered(Order $order): mixed;
+    public function ready(Order $order): mixed;
+    public function delayed(Order $order): mixed;
 }
 

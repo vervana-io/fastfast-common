@@ -9,47 +9,161 @@ use App\Models\Rider;
 class SellerOrderService extends OrderService implements FFOrderService
 {
 
-    public function created(Order $order, $tranxn)
+    public function created(Order $order, $tranxn): mixed
     {
-        // TODO: Implement created() method.
+        throw new \Exception(
+        'Seller cannot create an order');
     }
 
-    public function verified(Order $order, $transId)
+    public function verified(Order $order, $transId): mixed
     {
-        // TODO: Implement verified() method.
+        $customer = $order->customer;
+        $title = 'Order Verification';
+        $seller = $order->seller;
+        $body = 'Your Order ' . $order->reference . " needs your verification";
+        $not_data = [
+            'user_id' => $customer->user_id,
+            'order_id' => $order->id,
+            'title' => $title,
+            'body' => $body
+        ];
+        $this->sender->createNotification($not_data);
+        $not_data['seller_id'] = $seller->id;
+        $not_data['seller_name'] = $seller->name;
+        return $this->sender->sendNotification($customer->user, $not_data, [
+            'title' => $title,
+            'body' => $body,
+            'event' => 'verify_order',
+            'status' => 'verified',
+        ]);
     }
 
-    public function approved(Order $order, $exclude = [])
+    public function approved(Order $order, $exclude = []): mixed
     {
         return $this->sender->sendOrderApprovedNotification($order, $exclude);
     }
 
-    public function canceled(Order $order, $transId, $reason)
+    public function canceled(Order $order, $transId, $reason): mixed
     {
-            $customer = $order->customer;
-            $user = $customer->user;
-            $title = 'Order Cancellation';
-            $body = 'Order ' . $order->reference . " has been cancelled, reason: " . $reason;
-            $not_data = [
-                'user_id' => $user->id,
-                'order_id' => $order->id,
-                'transaction_id' => $transId,
-                'title' => $title,
-                'body' => $body
+        $customer = $order->customer;
+        $user = $customer->user;
+        $title = 'Order Cancellation';
+        $body = 'Order ' . $order->reference . " has been cancelled, reason: " . $reason;
+        $not_data = [
+            'user_id' => $user->id,
+            'order_id' => $order->id,
+            'transaction_id' => $transId,
+            'title' => $title,
+            'body' => $body
+        ];
+        $not_data['seller_id'] = $order->seller_id;
+        $this->sender->createNotification($not_data);
+        //$this->send_user_order_cancel_email($user, $order);
+        return $this->sender->sendNotification($user, $not_data,[
+           'title' => $title,
+            'body' => $body,
+            'event' => 'order_canceled',
+            'status' => 'canceled'
+
+        ]);
+
+    }
+
+    public function rejected(Order $order, Rider $rider): mixed
+    {
+        throw new \Exception(
+            'Seller cannot create an order');
+    }
+
+    public function delivered(Order $order): mixed
+    {
+        throw new \Exception(
+            'Seller cannot create an order');
+    }
+
+    public function ready(Order $order): mixed
+    {
+        $seller = $order->seller;
+        $rider = $order->rider;
+        if(!$rider) {
+            $this->info('Order has no rider');
+            return true;
+        }
+        $order_products = [];
+        $ordp = $order->order_products;
+        if ($ordp->count() > 0) {
+            foreach ($ordp as $ord) {
+                $order_products[] = [
+                    'Quantity' => $ord->quantity,
+                    'name' => $ord->product->title,
+                ];
+            }
+        }
+        $customer_address = [];
+        if ($order->is_gift == 1) {
+            $customer_address = [
+                'city' => $order->receiver_city,
+                'house_number' => $order->receiver_house_number,
+                'latitude' => $order->receiver_latitude,
+                'longitude' => $order->receiver_longitude,
+                'street' => $order->receiver_street,
             ];
-            $not_data['seller_id'] = $order->seller_id;
-            //$this->send_user_order_cancel_email($user, $order);
-            //return $this->sender->sendNotification($user, $not_data, $title, $body, 'order_canceled', 'canceled');
-
+        } else {
+            $address = $order->address;
+            $customer_address = [
+                'city' => $address?->city,
+                'house_number' => $address?->house_number,
+                'latitude' => $address?->latitude,
+                'longitude' => $address?->longitude,
+                'street' => $address?->street,
+            ];
+        }
+        $seller_primary_address = $seller->primary_address;
+        $seller_address = "";
+        $seller_addr_arr = [];
+        if (!is_null($seller_primary_address)) {
+            $seller_addr_arr = [
+                'city' => $seller_primary_address->address,
+                'house_number' => $seller_primary_address->house_number,
+                'latitude' => $seller_primary_address->latitude,
+                'longitude' => $seller_primary_address->longitude,
+                'street' => $seller_primary_address->street,
+                'nearest_bus_stop' => $seller_primary_address->nearest_bus_stop,
+            ];
+            $seller_address = $seller_primary_address->house_number . " " . $seller_primary_address->street . " ";
+        }
+        $order_info = [
+            'notification_name' => 'order_pickup',
+            'status' => $order->status,
+            'address' => $seller_addr_arr,
+            'customer_address' => $customer_address,
+            'amount' => $order->total_amount,
+            'sub_total' => $order->sub_total,
+            'delivery_fee' => $order->delivery_fee,
+            'order_id' => $order->id,
+            'orders' => $order_products,
+            'title' => $seller->name . " has an order",
+            "trading_name" => $seller->trading_name,
+        ];
+        $title = 'Order Pick Up';
+        $body = "Order $order->reference for $seller->name at $seller_address is ready for pick up";
+        $main_data = [
+            'user_id' => $rider->user_id,
+            'order_id' => $order->id,
+            'rider_id' => $rider->id,
+            'title' => $title,
+            'body' => $body,
+            'data' => json_encode($order_info),
+        ];
+        return $this->sender->sendNotification($rider->user, $main_data, [
+            'title' => $title,
+            'body'  => $body
+        ]);
     }
 
-    public function rejected(Order $order, Rider $rider)
+    public function delayed(Order $order): mixed
     {
-        // TODO: Implement rejected() method.
-    }
-
-    public function delivered(Order $order)
-    {
-        // TODO: Implement delivered() method.
+        // TODO: Implement delayed() method.
+        return true;
     }
 }

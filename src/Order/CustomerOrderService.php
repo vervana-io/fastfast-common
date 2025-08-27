@@ -70,6 +70,7 @@ class CustomerOrderService implements FFOrderService
             'title' => $title,
             'body' => $body
         ];
+        $this->sender->createNotification($data);
         return $this->sender->sendNotification($seller->user, $data, [
             'title' => $title,
             'body' => $body,
@@ -92,6 +93,7 @@ class CustomerOrderService implements FFOrderService
             'title' => $title,
             'body' => $body
         ];
+        $this->sender->createNotification($not_data);
         $not_data['seller_id'] = $seller->id;
         return $this->sender->sendNotification($seller->user, $not_data, [
             'title' => $title,
@@ -109,29 +111,32 @@ class CustomerOrderService implements FFOrderService
 
     public function ready(Order $order): mixed
     {
-        // TODO: Implement verified() method.
         return false;
     }
 
 
     public function delivered(Order $order): mixed
     {
-        // TODO: Implement verified() method.
         return false;
     }
     private function pickup(Order $order)
     {
-        // TODO: Implement verified() method.
+
     }
     public function rejected(Order $order, Rider $rider): mixed
     {
-        // TODO: Implement verified() method.
+
         return true;
     }
 
     private function arrived(Order $order, $place): mixed
     {
-        // TODO: Implement verified() method.
+
         return true;
+    }
+
+    public function delayed(Order $order): mixed
+    {
+        return false;
     }
 }

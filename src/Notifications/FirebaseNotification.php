@@ -72,7 +72,7 @@ class FirebaseNotification
      * @throws MessagingException
      * @throws FirebaseException
      */
-    public function sendRidersNotifications($order, $riders, $requests, $data, $metadata): Messaging\MulticastSendReport
+    public function sendRidersNotifications($order, $riders, $devices, $requests, $data, $metadata): Messaging\MulticastSendReport
     {
         $title = $metadata['title'];
         $body = $metadata['body'];
@@ -90,7 +90,7 @@ class FirebaseNotification
                 'data' => json_encode($data),
             ];
             $cm = CloudMessage::new()->withData($message)->withNotification($notification);
-            $tokens = $this->getToken($rider->user);
+            $tokens = $devices[$rider->user_id];
             foreach ($tokens as $token) {
                 $messages[] = $cm->toToken($token);
             }

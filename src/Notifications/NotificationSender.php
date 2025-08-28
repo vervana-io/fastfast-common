@@ -2,6 +2,7 @@
 
 namespace FastFast\Common\Notifications;
 
+use FastFast\Common\Service\UserDeviceService;
 use App\Models\Notification as Model_Notification;
 use App\Models\Rider;
 use App\Models\User;
@@ -14,6 +15,7 @@ use Pusher\PusherException;
 class NotificationSender
 {
 
+    private UserDeviceService $deviceService;
     public function __construct(
         private FirestoreClient $firestore,
         private PusherNotification $pusher,
@@ -21,6 +23,7 @@ class NotificationSender
         private APNotification $apns,
     )
     {
+        $this->deviceService = new UserDeviceService();
     }
 
     public function createNotification($data)
@@ -38,39 +41,26 @@ class NotificationSender
         $title = $metadata['title'];
         $body =  $metadata['body'];
         $results = [];
-        $fcm =$this->fcm->sendUserMessage($this->getToken($user), $data, $title, $body);
-        $ios = $this->getToken($user, 'ios');
+        $devices = $this->deviceService->getTokens($user);
+        $results['fcm'] =$this->fcm->sendUserMessage($devices['android'], $data, $title, $body);
+        $ios = $devices['ios'];
         if (!empty($ios)) {
-            $type = $user->user_type == 1 ? 'customer' : ($user->user_type == 3 ? 'rider' : 'seller');
-            $results['apns'] = $this->apns->sendUserMessage($type,$this->getToken($user, 'ios'), $data, $title, $body);
+            $results['apns'] = $this->apns->sendUserMessage($devices['type'],$devices['android'], $data, $title, $body);
         }
         $results['pusher'] = $this->pusher->sendUserMessage($user,$data, $metadata['event'], $metadata['channel'] ?? 'FastFast');
 
         return $results;
     }
 
-    public function getToken(User $user, $type = 'android') {
-        $devices = $user->devices?->collect();
-        if (!$devices) {
-            return [];
-        }
-        if ($user->device_token && $user->device_type == $type) {
-            $devices->push([
-                'token' => $user->device_token,
-                'type'=> $type
-            ]);
-        }
-        return $devices->where('type', '=', $type)->pluck('token')->toArray();
-    }
-
 
     public function sendAllMessages($users, $data, $title, $body, $event)
     {
+        $devices = $this->deviceService->getUsersDeviceTokens($users);
         $fcmDevices = collect();
         $apnDevices = collect();
         foreach ($users as $user) {
-            $androidDevices = $this->getToken($user);
-            $iosDevices = $this->getToken($user, 'ios');
+            $androidDevices = $devices;
+            $iosDevices = $this->getTokens($devices, 'ios');
             $fcmDevices->push($androidDevices);
 
             $apnDevices->push([
@@ -83,6 +73,7 @@ class NotificationSender
         $this->fcm->sendUserMessage($fcmDevices->toArray(), $data, $title, $body);
         $this->apns->push($apnDevices->toArray(),$data, $title, $body);
         $this->pusher->sendMessage($data, $event);
+        return[];
     }
 
     public function sendOrderApprovedNotification(Order $order, $exclude = [])
@@ -190,14 +181,29 @@ class NotificationSender
             'title' => $title,
             'body' => $body
         ];
+        $devices = $this->deviceService->getUsersDeviceTokens($riders->pluck('user'));
+        $ios = $this->getTokens($devices, 'ios');
+        $android = $this->getTokens($devices, 'android');
 
         $response = [];
         $response['firestore'] = $this->firestore->addRiderOrderDocuments($order, $riders, $requests, $data, $metadata);
         $response['pusher'] = $this->pusher->sendRidersNotifications($order, $riders, $requests, $data, $metadata);
-        $response['fcm'] = $this->fcm->sendRidersNotifications($order, $riders, $requests, $data, $metadata);
-        $response['apns'] = $this->apns->sendRidersNotifications($order, $riders, $requests, $data, $metadata );
+        $response['fcm'] = $this->fcm->sendRidersNotifications($order, $riders, $android, $requests, $data, $metadata);
+        $response['apns'] = $this->apns->sendRidersNotifications($order, $riders, $ios, $requests, $data, $metadata );
 
         return $response;
+    }
+
+    private function getTokens($devices, $type)
+    {
+        return $devices->filter(function ($device) {
+            return !empty($device['android']) && count($device['android']) > 0;
+        })->map(function ($device) {
+            return [
+                'id' => $device['id'],
+                'tokens' => $device['android']
+            ];
+        });
     }
 
     public function getNearestRiders($id, $latitude, $longitude, $distance = 5, $excludes = [], $prodTest = false)

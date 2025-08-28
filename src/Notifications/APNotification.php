@@ -34,20 +34,16 @@ class APNotification
      * @throws InvalidPayloadException
      * @throws Exception
      */
-    public function sendRidersNotifications($order, $riders, $requests, $data, $metadata): array
+    public function sendRidersNotifications($order, $riders, $devices, $requests, $data, $metadata): array
     {
         $title = $metadata['title'];
         $body = $metadata['body'];
-        $notification = [
-            'title' => $title,
-            'body' => $body,
-        ];
+        $notifications = [];
 
-        $results = [];
-        //TODO: to make this parallel
+        $apn = new CustomAPNNotification('rider'); // same app bundle id
         foreach ($riders as $rider) {
-            $tokens = $this->getToken($rider->user);
-            $notification[] = [
+            $notifications['tokens'] = $devices[$rider->user_id];
+            $notifications['data'] = [
                 'user_id' => $rider->user_id,
                 'order_id' => $order->id,
                 'rider_id' => $rider->id,
@@ -56,23 +52,8 @@ class APNotification
                 'body' => $body,
                 'data' => json_encode($data),
             ];
-            $apn = new CustomAPNNotification('rider');
-            $results[$rider->id] = $apn->sendMultiDeviceNotification($tokens, $notification);
         }
 
-        return $results;
-    }
-    public function getToken(User $user, $type = 'android') {
-        $devices = $user->devices?->collect();
-        if (!$devices) {
-            return [];
-        }
-        if ($user->device_token && $user->device_type == $type) {
-            $devices->push([
-                'token' => $user->device_token,
-                'type'=> $type
-            ]);
-        }
-        return $devices->where('type', '=', $type)->pluck('token')->toArray();
+        return $apn->sendMultiMessages($notifications, $metadata);
     }
 }

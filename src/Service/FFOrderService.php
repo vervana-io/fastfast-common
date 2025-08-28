@@ -20,6 +20,10 @@ interface FFOrderService
 
     public function delivered(Order $order): mixed;
     public function ready(Order $order): mixed;
-    public function delayed(Order $order): mixed;
+    public function delayed(Order $order, $time): mixed;
+    public function accepted(Order $order): mixed;
+    public function pickup(Order $order): mixed;
+    public function arrived(Order $order, string $at): mixed;
+
 }
 

@@ -34,6 +34,9 @@ class CustomAPNNotification
         default => config('broadcasting.connections.apn.production')
       },
     ];
+
+      $authProvider = AuthProvider\Token::create($this->options);
+      $this->client = new Client($authProvider, $this->options['production']);
   }
 
     /**
@@ -87,9 +90,24 @@ class CustomAPNNotification
       return $client->push();
   }
 
-  public function sendAllMessages($data)
+  public function sendMultiMessages($messages, $meta)
   {
+      $alert = Alert::create()
+          ->setTitle($meta['title'])
+          ->setBody($meta['body']);
 
+      $payload = Payload::create()
+          ->setAlert($alert);
+      $payload->setSound('default');
 
+      $payload->setCustomValue('type', $meta['title']);
+      foreach ($messages as $message) {
+          $payload->setCustomValue('data', $message['data']);
+          foreach ($message['tokens'] as $token) {
+              $this->client->addNotification(new Notification($payload, $token));
+          }
+      }
+
+      return $this->client->push();
   }
 }

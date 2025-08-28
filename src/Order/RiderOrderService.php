@@ -19,7 +19,7 @@ use Pusher\PusherException;
 
 class RiderOrderService extends OrderService implements FFOrderService
 {
-    public function accepted(Order $order)
+    public function accepted(Order $order): mixed
     {
         //send to seller, customer,admin
         $customer = $order->customer;
@@ -35,7 +35,7 @@ class RiderOrderService extends OrderService implements FFOrderService
             'body' => $body
         ];
 
-        $this->sender->sendAllMessages([
+        return $this->sender->sendAllMessages([
             $seller,
             $customer,
         ], $data, $title, $body, 'rider_delivery_accept');
@@ -82,18 +82,18 @@ class RiderOrderService extends OrderService implements FFOrderService
     {
         return $this->sender->sendOrderApprovedNotification($order, $exclude);
     }
-    private function pickup(Order $order)
+    public function pickup(Order $order): mixed
     {
         return false;
     }
 
-    private function arrived(Order $order, $place): mixed
+    public function arrived(Order $order, $place): mixed
     {
 
         return true;
     }
 
-    public function delayed(Order $order): mixed
+    public function delayed(Order $order, $time): mixed
     {
         return false;
     }

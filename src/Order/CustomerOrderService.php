@@ -2,13 +2,13 @@
 
 namespace FastFast\Common\Order;
 
+use Error;
 use App\Jobs\OrderReminderJob;
 use App\Models\Group_Order;
 use App\Models\Rider;
 use App\Models\Transaction;
 use FastFast\Common\Notifications\NotificationSender;
 use FastFast\Common\Service\FFOrderService;
-use Illuminate\Support\Facades\Log;
 use App\Models\Order;
 use Kreait\Firebase\Exception\FirebaseException;
 use Kreait\Firebase\Exception\MessagingException;
@@ -119,9 +119,9 @@ class CustomerOrderService implements FFOrderService
     {
         return false;
     }
-    private function pickup(Order $order)
+    public function pickup(Order $order): mixed
     {
-
+        throw new Error('Customer cannot pickup order');
     }
     public function rejected(Order $order, Rider $rider): mixed
     {
@@ -129,14 +129,18 @@ class CustomerOrderService implements FFOrderService
         return true;
     }
 
-    private function arrived(Order $order, $place): mixed
+    public function arrived(Order $order, $place): mixed
     {
-
-        return true;
+        throw new Error('Customer cannot pickup order');
     }
 
-    public function delayed(Order $order): mixed
+    public function delayed(Order $order, $time): mixed
     {
-        return false;
+        throw new Error('Customer cannot delay order');
+    }
+
+    public function accepted(Order $order): mixed
+    {
+        throw new Error('Customer cannot pickup order');
     }
 }

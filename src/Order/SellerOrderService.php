@@ -2,6 +2,7 @@
 
 namespace FastFast\Common\Order;
 
+use Error;
 use FastFast\Common\Service\FFOrderService;
 use App\Models\Order;
 use App\Models\Rider;
@@ -161,9 +162,37 @@ class SellerOrderService extends OrderService implements FFOrderService
         ]);
     }
 
-    public function delayed(Order $order): mixed
+    public function delayed(Order $order, $time): mixed
     {
-        // TODO: Implement delayed() method.
-        return true;
+        $title = 'Order Delay';
+        $body = 'Preparation of order ' . $order->reference . " by " . $order->seller->name . " would be delayed by " . $time . " minutes.";
+        $not_data = [
+            'user_id' => $order->customer->user_id,
+            'order_id' => $order->id,
+            'title' => $title,
+            'body' => $body
+        ];
+        $this->sender->createNotification($not_data);
+        $not_data['seller_id'] = $order->seller->id;
+        $not_data['seller_name'] = $order->seller->name;
+        return $this->sender->sendNotification($order->customer->user, $not_data,[
+            'title' => $title,
+            'body'  => $body
+        ]);
+    }
+
+    public function accepted(Order $order): mixed
+    {
+        throw new Error('Seller cannot accept');
+    }
+
+    public function pickup(Order $order): mixed
+    {
+        throw new Error('Seller cannot accept');
+    }
+
+    public function arrived(Order $order, string $at): mixed
+    {
+        throw new Error('Seller cannot accept');
     }
 }

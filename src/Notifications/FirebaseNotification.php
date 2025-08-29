@@ -5,16 +5,31 @@ namespace FastFast\Common\Notifications;
 use Kreait\Firebase\Exception\FirebaseException;
 use Kreait\Firebase\Exception\MessagingException;
 use Kreait\Firebase\Factory;
+use Kreait\Firebase\Http\HttpClientOptions;
 use Kreait\Firebase\Messaging;
 use Kreait\Firebase\Messaging\CloudMessage;
 
 class FirebaseNotification
 {
     private \Kreait\Firebase\Contract\Messaging $fcm;
+    private Factory $factory;
+
 
     public function __construct()
     {
         $this->fcm = $this->getFirebaseInstance();
+    }
+
+    private function getFactory()
+    {
+        $factory = new Factory();
+        if (app()->environment('testing')) {
+            $http = HttpClientOptions::default()->withGuzzleConfigOption('base_uri', 'http://localhost:8080')
+                ->withGuzzleConfigOption('verify', false)
+                ->withGuzzleConfigOption('handler', app('firebase.mock.handler'));
+            $factory = $factory->withHttpClientOptions($http);
+        }
+        $this->factory = $factory;
     }
 
     private function getFirebaseInstance()

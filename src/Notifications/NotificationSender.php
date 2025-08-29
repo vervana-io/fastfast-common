@@ -42,10 +42,12 @@ class NotificationSender
         $body =  $metadata['body'];
         $results = [];
         $devices = $this->deviceService->getTokens($user);
-        $results['fcm'] =$this->fcm->sendUserMessage($devices['android'], $data, $title, $body);
+        $tokens = $devices['tokens'];
+
+        $results['fcm'] =$this->fcm->sendUserMessage($tokens['android'], $data, $title, $body);
         $ios = $devices['ios'];
         if (!empty($ios)) {
-            $results['apns'] = $this->apns->sendUserMessage($devices['type'],$devices['android'], $data, $title, $body);
+            $results['apns'] = $this->apns->sendUserMessage($devices['type'],$tokens['ios'], $data, $title, $body);
         }
         $results['pusher'] = $this->pusher->sendUserMessage($user,$data, $metadata['event'], $metadata['channel'] ?? 'FastFast');
 

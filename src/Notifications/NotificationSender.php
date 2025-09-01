@@ -188,7 +188,7 @@ class NotificationSender
         $android = $this->getTokens($devices, 'android');
 
         $response = [];
-        //$response['firestore'] = $this->firestore->addRiderOrderDocuments($order, $riders, $requests, $data, $metadata);
+        //$response['firestore'] = $this->firestore->addRiderOrderDocuments($order, $riders, $reques  ts, $data, $metadata);
         $response['pusher'] = $this->pusher->sendRidersNotifications($order, $riders, $requests, $data, $metadata);
         $response['fcm'] = $this->fcm->sendRidersNotifications($order, $riders, $android, $requests, $data, $metadata);
         $response['apns'] = $this->apns->sendRidersNotifications($order, $riders, $ios, $requests, $data, $metadata );

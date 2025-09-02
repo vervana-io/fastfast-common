@@ -1,0 +1,27 @@
+{
+    "request": {
+        "method": "POST",
+        "urlPath": "/v1/projects/.*/registrations:validate",
+        "headers": {
+            "Content-Type": {
+                "equalTo": "application/json"
+            },
+            "Authorization": {
+                "matches": "Bearer .*"
+            }
+        }
+    },
+    "response": {
+        "status": 200,
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "jsonBody": {
+            "valid": [
+                "mock-valid-token-12345"
+            ],
+            "invalid": [],
+            "unknown": []
+        }
+    }
+}

@@ -8,12 +8,15 @@ use Kreait\Firebase\Factory;
 use Kreait\Firebase\Http\HttpClientOptions;
 use Kreait\Firebase\Messaging;
 use Kreait\Firebase\Messaging\CloudMessage;
+use Psr\Cache\CacheItemPoolInterface;
+use Beste\Json;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Cache\CacheItem;
 
 class FirebaseNotification
 {
     private \Kreait\Firebase\Contract\Messaging $fcm;
     private Factory $factory;
-
 
     public function __construct()
     {
@@ -26,14 +29,48 @@ class FirebaseNotification
         $factory = new Factory();
 
         if (app()->environment('testing')) {
+            // This is the key to mocking Google Auth. We create an in-memory cache
+            // and pre-populate it with a fake, non-expired access token.
+            // The google/auth library will find this token in the cache and use it,
+            // preventing it from making a real outbound HTTP request for a token.
+            $cache = new ArrayAdapter();
+            $cacheKey = 'google_auth_token_'.md5(Json::encode(storage_path('app/firebase') .'/fastfast-firebase.json'));
+            $item = $cache->getItem($cacheKey);
+            $item->set(Json::encode(['access_token' => 'fake-test-token', 'expires_at' => time() + 3600]));
+            $cache->save($item);
+
+
             $http = HttpClientOptions::default()
                 ->withGuzzleConfigOption('base_uri', env('FIREBASE_TEST_ENDPOINT', 'http://localhost:8080'))
                 ->withGuzzleConfigOption('verify', false);
 
-            $factory = $factory->withHttpClientOptions($http);
+            // Rewrite all outgoing requests (absolute URLs) to WireMock host
+            $wiremockBase = env('FIREBASE_TEST_ENDPOINT', 'http://localhost:8080');
+            $rewriteToWiremock = function (callable $handler) use ($wiremockBase) {
+                return function (\Psr\Http\Message\RequestInterface $request, array $options) use ($handler, $wiremockBase) {
+                    $wm = new \GuzzleHttp\Psr7\Uri($wiremockBase);
+                    $uri = $request->getUri()
+                        ->withScheme($wm->getScheme())
+                        ->withHost($wm->getHost())
+                        ->withPort($wm->getPort());
+                    if ($wm->getPath() !== '' && $wm->getPath() !== '/') {
+                        $uri = $uri->withPath(rtrim($wm->getPath(), '/') . $request->getUri()->getPath());
+                    }
+                    $request = $request->withUri($uri)->withHeader('Host', $wm->getHost());
+                    return $handler($request, $options);
+                };
+            };
+
+            $stack = \GuzzleHttp\HandlerStack::create();
+            $stack->push($rewriteToWiremock, 'wiremock_rewrite');
+            $http = $http->withGuzzleConfigOption('handler', $stack);
+
+            $factory = $factory
+                ->withHttpClientOptions($http)
+                ->withAuthTokenCache($cache);
         }
 
-        $factory = $factory->withServiceAccount(storage_path('app/firebase') . '/fastfast-firebase.json');
+        $factory = $factory->withServiceAccount(storage_path('app/firebase') .'/fastfast-firebase.json');
 
         $this->factory = $factory;
     }
@@ -42,6 +79,7 @@ class FirebaseNotification
     {
         return $this->factory->createMessaging();
     }
+
     /**
      * @throws MessagingException
      * @throws FirebaseException
@@ -56,7 +94,6 @@ class FirebaseNotification
         }
         return $resp;
     }
-
 
     private function generateFirebaseNotification($title, $body)
     {

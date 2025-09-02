@@ -1,0 +1,30 @@
+{
+    "request": {
+        "method": "POST",
+        "urlPath": "/v1/projects/.*/messages:send",
+        "headers": {
+            "Content-Type": {
+                "equalTo": "application/json"
+            },
+            "Authorization": {
+                "matches": "Bearer .*"
+            }
+        }
+    },
+    "response": {
+        "status": 200,
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "jsonBody": {
+            "sendCount": 1,
+            "successCount": 1,
+            "failureCount": 0,
+            "responses": [
+                {
+                    "name": "projects/mock-project-id/messages/mock-message-id-12345"
+                }
+            ]
+        }
+    }
+}

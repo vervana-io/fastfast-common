@@ -1,0 +1,20 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/oauth2/v4/token",
+    "headers": {
+      "Content-Type": { "equalTo": "application/x-www-form-urlencoded" }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "access_token": "fake-test-token-12345",
+      "expires_in": 3600,
+      "token_type": "Bearer"
+    }
+  }
+}

@@ -94,7 +94,7 @@ class NotificationSender
                     $avptarr[] = $ord->product->prep_time;
                 }
             }
-            $average_prep_time = array_sum($avptarr) / count($avptarr);
+            $average_prep_time = count($avptarr) > 0 ? array_sum($avptarr) / count($avptarr) : 0;
             $average_prep_time = round($average_prep_time);
             $customer_address = [
                 'latitude' => $order->delivery_latitude,
@@ -152,6 +152,10 @@ class NotificationSender
      */
     public function notifyRiders(Order $order, $orderInfo, $primaryAddress, $distance = 5, $exclude = [])
     {
+        if(!$primaryAddress)
+        {
+            return false;
+        }
         $riders = $this->getNearestRiders($order->seller->id, $primaryAddress->latitude, $primaryAddress->longititude, $distance, $exclude, true);
         if ($riders->count() < 1) {
             return $this->notifyRiders($order->seller->id,$primaryAddress->latitude, $primaryAddress->longititude, $distance + 2, $exclude);

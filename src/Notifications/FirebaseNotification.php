@@ -17,6 +17,7 @@ class FirebaseNotification
 
     public function __construct()
     {
+        $this->getFactory();
         $this->fcm = $this->getFirebaseInstance();
     }
 
@@ -25,8 +26,7 @@ class FirebaseNotification
         $factory = new Factory();
         if (app()->environment('testing')) {
             $http = HttpClientOptions::default()->withGuzzleConfigOption('base_uri', 'http://localhost:8080')
-                ->withGuzzleConfigOption('verify', false)
-                ->withGuzzleConfigOption('handler', app('firebase.mock.handler'));
+                ->withGuzzleConfigOption('verify', false);
             $factory = $factory->withHttpClientOptions($http);
         }
         $this->factory = $factory;
@@ -34,7 +34,7 @@ class FirebaseNotification
 
     private function getFirebaseInstance()
     {
-        return (new Factory)->withServiceAccount(storage_path('app/firebase') .'/fastfast-firebase.json')->createMessaging();
+        return $this->factory->withServiceAccount(storage_path('app/firebase') .'/fastfast-firebase.json')->createMessaging();
     }
     /**
      * @throws MessagingException
@@ -61,14 +61,19 @@ class FirebaseNotification
      * @throws MessagingException
      * @throws FirebaseException
      */
-    public function sendUserMessage($tokens, $data, $title, $body): Messaging\MulticastSendReport
+    public function sendUserMessage($devices, $data, $title, $body): Messaging\MulticastSendReport
     {
         $notification = $this->generateFirebaseNotification($title, $body);
         $messages = [];
         $cm = CloudMessage::new()->withData($data)->withNotification($notification);
-        foreach ($tokens as $token) {
-            $messages[] = $cm->toToken($token);
+        foreach ($devices as $device) {
+            $tokens = $device['tokens'];
+            $id = $device['id'];
+            foreach ($tokens as $token) {
+                $messages[] = $cm->toToken($token);
+            }
         }
+
         return $this->fcm->sendAll($messages);
     }
 

@@ -58,22 +58,20 @@ class NotificationSender
     public function sendAllMessages($users, $data, $title, $body, $event)
     {
         $devices = $this->deviceService->getUsersDeviceTokens($users);
-        $fcmDevices = collect();
-        $apnDevices = collect();
-        foreach ($users as $user) {
-            $androidDevices = $devices;
-            $iosDevices = $this->getTokens($devices, 'ios');
-            $fcmDevices->push($androidDevices);
+        $fcmDevices = $this->getTokens($devices, 'android');
+        $apnDevices = $devices->map(function ($device) {
+            return [
+                'tokens' => $device['ios'],
+                'userType' => $device['user_type'],
+                'id' => $device['id'],
+            ];
+        })->filter(function ($device) {
+            return count($device['tokens']) > 0;
+        })->values()->toArray();
 
-            $apnDevices->push([
-                'tokens' => $iosDevices,
-                'userType' => $user->user_type == 1 ? 'customer' : ($user->user_type == 3 ? 'rider' : 'seller'),
-                'id' => $user->id,
-            ]);
-        }
 
-        $this->fcm->sendUserMessage($fcmDevices->toArray(), $data, $title, $body);
-        $this->apns->push($apnDevices->toArray(),$data, $title, $body);
+        $this->fcm->sendUserMessage($fcmDevices, $data, $title, $body);
+        $this->apns->push($apnDevices, $data, $title, $body);
         $this->pusher->sendMessage($data, $event);
         return[];
     }
@@ -198,12 +196,12 @@ class NotificationSender
 
     private function getTokens($devices, $type)
     {
-        return $devices->filter(function ($device) {
-            return !empty($device['android']) && count($device['android']) > 0;
-        })->map(function ($device) {
+        return $devices->filter(function ($device) use($type){
+            return !empty($device[$type]) && count($device[$type]) > 0;
+        })->map(function ($device) use($type) {
             return [
                 'id' => $device['id'],
-                'tokens' => $device['android']
+                'tokens' => $device[$type]
             ];
         });
     }

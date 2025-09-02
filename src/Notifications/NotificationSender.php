@@ -6,6 +6,7 @@ use FastFast\Common\Service\UserDeviceService;
 use App\Models\Notification as Model_Notification;
 use App\Models\Rider;
 use App\Models\User;
+use App\Models\Order;
 use FastFast\Common\Firestore\FirestoreClient;
 use Kreait\Firebase\Exception\FirebaseException;
 use Kreait\Firebase\Exception\MessagingException;

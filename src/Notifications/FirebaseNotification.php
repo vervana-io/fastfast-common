@@ -25,7 +25,7 @@ class FirebaseNotification
     {
         $factory = new Factory();
         if (app()->environment('testing')) {
-            $http = HttpClientOptions::default()->withGuzzleConfigOption('base_uri', 'http://localhost:8080')
+            $http = HttpClientOptions::default()->withGuzzleConfigOption('base_uri', env('FIREBASE_TEST_ENDPOINT'))
                 ->withGuzzleConfigOption('verify', false);
             $factory = $factory->withHttpClientOptions($http);
         }

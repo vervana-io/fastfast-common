@@ -6,6 +6,7 @@ namespace FastFast\Common\Order;
 use App\Jobs\NotifyAvailableRiders;
 use App\Models\Rider;
 use App\Models\Order;
+use App\Models\User;
 use FastFast\Common\Firestore\FirestoreClient;
 use FastFast\Common\Notifications\APNotification;
 use FastFast\Common\Notifications\CustomAPNNotification;
@@ -34,11 +35,8 @@ class RiderOrderService extends OrderService implements FFOrderService
             'title' => $title,
             'body' => $body
         ];
-
-        return $this->sender->sendAllMessages([
-            $seller,
-            $customer,
-        ], $data, $title, $body, 'rider_delivery_accept');
+        $users = User::query()->whereIn('id', [$customer->user_id, $seller->user_id])->get();
+        return $this->sender->sendAllMessages($users, $data, $title, $body, 'rider_delivery_accept');
     }
 
     public function created(Order $order, $tranxn): mixed

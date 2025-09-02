@@ -24,17 +24,23 @@ class FirebaseNotification
     private function getFactory()
     {
         $factory = new Factory();
+
         if (app()->environment('testing')) {
-            $http = HttpClientOptions::default()->withGuzzleConfigOption('base_uri', env('FIREBASE_TEST_ENDPOINT'))
+            $http = HttpClientOptions::default()
+                ->withGuzzleConfigOption('base_uri', env('FIREBASE_TEST_ENDPOINT', 'http://localhost:8080'))
                 ->withGuzzleConfigOption('verify', false);
+
             $factory = $factory->withHttpClientOptions($http);
         }
+
+        $factory = $factory->withServiceAccount(storage_path('app/firebase') . '/fastfast-firebase.json');
+
         $this->factory = $factory;
     }
 
     private function getFirebaseInstance()
     {
-        return $this->factory->withServiceAccount(storage_path('app/firebase') .'/fastfast-firebase.json')->createMessaging();
+        return $this->factory->createMessaging();
     }
     /**
      * @throws MessagingException

@@ -128,7 +128,7 @@ class FirebaseNotification
                 'data' => json_encode($data),
             ];
             $cm = CloudMessage::new()->withData($message)->withNotification($notification);
-            $tokens = $devices[$rider->user_id];
+            $tokens = $devices[$rider->user_id] ?? [];
             foreach ($tokens as $token) {
                 $messages[] = $cm->toToken($token);
             }

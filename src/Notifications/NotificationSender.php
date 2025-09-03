@@ -189,8 +189,12 @@ class NotificationSender
             'body' => $body
         ];
         $devices = $this->deviceService->getUsersDeviceTokens($riders->pluck('user'));
-        $ios = $this->getTokens($devices, 'ios');
-        $android = $this->getTokens($devices, 'android');
+        $ios = $this->getTokens($devices, 'ios')->mapWithKeys(function ($device) {
+            return [$device['id'] => $device['tokens']];
+        })->toArray();
+        $android = $this->getTokens($devices, 'android')->mapWithKeys(function ($device) {
+            return [$device['id'] => $device['tokens']];
+        })->toArray();
 
         $response = [];
         //$response['firestore'] = $this->firestore->addRiderOrderDocuments($order, $riders, $reques  ts, $data, $metadata);

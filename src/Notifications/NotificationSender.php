@@ -12,6 +12,7 @@ use Kreait\Firebase\Exception\FirebaseException;
 use Kreait\Firebase\Exception\MessagingException;
 use Pusher\ApiErrorException;
 use Pusher\PusherException;
+use Illuminate\Database\Eloquent\Builder;
 
 class NotificationSender
 {

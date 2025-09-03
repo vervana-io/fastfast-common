@@ -45,7 +45,7 @@ class NotificationSender
         $devices = $this->deviceService->getTokens($user);
         $tokens = $devices['tokens'];
         if (isset($tokens['android'])) {
-            $results['fcm'] = $this->fcm->sendUserMessage($tokens['android'], $data, $title, $body);
+            $results['fcm'] = $this->fcm->sendToTokens($tokens['android'], $data, $title, $body);
         }
         if (isset($tokens['ios'])) {
             $results['apns'] = $this->apns->sendUserMessage($devices['type'],$tokens['ios'], $data, $title, $body);

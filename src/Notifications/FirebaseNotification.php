@@ -67,7 +67,24 @@ class FirebaseNotification
      * @throws MessagingException
      * @throws FirebaseException
      */
-    public function sendUserMessage($tokens, $data, $title, $body): Messaging\MulticastSendReport
+    public function sendUserMessage($devices, $data, $title, $body): Messaging\MulticastSendReport
+    {
+
+        $notification = $this->generateFirebaseNotification($title, $body);
+        $messages = [];
+        $cm = CloudMessage::new()->withData($data)->withNotification($notification);
+        foreach ($devices as $device) {
+            $tokens = $device['tokens'];
+            $id = $device['id'];
+            foreach ($tokens as $token) {
+                $messages[] = $cm->toToken($token);
+            }
+        }
+
+        return $this->fcm->sendAll($messages);
+    }
+
+    public function sendToTokens($tokens, $data, $title, $body): Messaging\MulticastSendReport
     {
         $notification = $this->generateFirebaseNotification($title, $body);
         $messages = [];
@@ -75,11 +92,6 @@ class FirebaseNotification
         foreach ($tokens as $token) {
             $messages[] = $cm->toToken($token);
         }
-        /*foreach ($devices as $device) {
-            $tokens = $device['tokens'];
-            $id = $device['id'];
-        }*/
-
         return $this->fcm->sendAll($messages);
     }
 

@@ -13,6 +13,7 @@ use Kreait\Firebase\Exception\MessagingException;
 use Pusher\ApiErrorException;
 use Pusher\PusherException;
 use Illuminate\Database\Eloquent\Builder;
+use App\Models\Rider_Order;
 
 class NotificationSender
 {

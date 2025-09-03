@@ -157,9 +157,9 @@ class NotificationSender
         {
             return false;
         }
-        $riders = $this->getNearestRiders($order->seller->id, $primaryAddress->latitude, $primaryAddress->longititude, $distance, $exclude, true);
+        $riders = $this->getNearestRiders($order->seller->id, $primaryAddress->latitude, $primaryAddress->longitude, $distance, $exclude, true);
         if ($riders->count() < 1) {
-            return $this->notifyRiders($order->seller->id,$primaryAddress->latitude, $primaryAddress->longititude, $distance + 2, $exclude);
+            return $this->notifyRiders($order, $orderInfo, $primaryAddress, $distance + 2, $exclude);
         }
 
         return $this->sendRidersNotifications($order, $riders, $orderInfo);

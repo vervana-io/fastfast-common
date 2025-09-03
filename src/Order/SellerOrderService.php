@@ -87,7 +87,7 @@ class SellerOrderService extends OrderService implements FFOrderService
         $seller = $order->seller;
         $rider = $order->rider;
         if(!$rider) {
-            return true;
+            return $this->approved($order);
         }
         $order_products = [];
         $ordp = $order->order_products;

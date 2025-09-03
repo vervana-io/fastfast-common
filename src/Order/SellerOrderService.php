@@ -87,7 +87,6 @@ class SellerOrderService extends OrderService implements FFOrderService
         $seller = $order->seller;
         $rider = $order->rider;
         if(!$rider) {
-            $this->info('Order has no rider');
             return true;
         }
         $order_products = [];

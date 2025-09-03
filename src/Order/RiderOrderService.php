@@ -64,7 +64,21 @@ class RiderOrderService extends OrderService implements FFOrderService
 
     public function delivered(Order $order): mixed
     {
-        return false;
+        $title = 'Order Delivered';
+        $body = 'Order ' . $order->reference . " has been delivered successfully.";
+        $customer = $order->customer;
+        $seller = $order->seller;
+        $rider = $order->rider;
+        $data = [
+            'user_id' => $customer->user_id,
+            'order_id' => $order->id,
+            'title' => $title,
+            'body' => $body,
+            'rider_id' => $rider->id,
+            'seller_id' => $seller->id,
+        ];
+        $users = User::query()->whereIn('id', [$customer->user_id, $seller->user_id])->get();
+        return $this->sender->sendAllMessages($users, $data, $title, $body, 'rider_order_delivered');
     }
 
 
@@ -82,13 +96,61 @@ class RiderOrderService extends OrderService implements FFOrderService
     }
     public function pickup(Order $order): mixed
     {
-        return false;
+        $rider = $order->rider;
+        $customer = $order->customer;
+        $title = 'Order Pick up';
+        $body = 'Your Order ' . $order->reference . " has been picked up by $rider->full_name will is on the way";
+        $data = [
+            'user_id' => $customer->user_id,
+            'order_id' => $order->id,
+            'title' => $title,
+            'body' => $body
+        ];
+        $this->sender->createNotification($data);
+        $data['customer_id'] = $customer->id;
+        return $this->sender->sendNotification($customer->user, $data, [
+            'title' => $title,
+            'body' => $body,
+            'event' => 'customer_pick_up_order',
+        ]);
     }
 
     public function arrived(Order $order, $place): mixed
     {
+        $title = 'Rider Arrival';
+        $rider = $order->rider;
+        $customer = $order->customer;
+        $seller = $order->seller;
+        if ($place == 'seller') {
+            $body = "$rider->full_name has arrived to pick up Order: $order->reference";
+            $data = [
+                'user_id' => $seller->user_id,
+                'order_id' => $order->id,
+                'title' => $title,
+                'body' => $body
+            ];
 
-        return true;
+            return $this->sender->sendNotification($seller->user, $data, [
+                'title' => $title,
+                'body' => $body,
+                'event' => 'river_arrived',
+                'channel'
+            ]);
+        }
+        if ($place == 'customer') {
+            $body = "$rider->full_name has arrived with your Order: $order->reference";
+            $data = [
+                'user_id' => $customer->user_id,
+                'order_id' => $order->id,
+                'title' => $title,
+                'body' => $body
+            ];
+            return $this->sender->sendNotification($customer->user, $data, [
+                'title' => $title,
+                'body' => $body,
+                'event' => 'river_arrived',
+            ]);
+        }
     }
 
     public function delayed(Order $order, $time): mixed

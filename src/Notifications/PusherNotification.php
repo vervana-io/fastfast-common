@@ -73,9 +73,14 @@ class PusherNotification
                     'data' => json_encode($data),
                 ]
             ]
-        ]);
+        ])->toArray();
 
-        return $this->pusher->triggerBatchAsync($pusherBatch->toArray())->wait();
+        $results = [];
+        foreach (array_chunk($pusherBatch, 10) as $chunk) {
+            $results[] = $this->pusher->triggerBatchAsync($chunk)->wait();
+        }
+
+        return $results;
     }
 
     /**

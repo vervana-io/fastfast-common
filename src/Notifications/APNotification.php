@@ -42,15 +42,21 @@ class APNotification
 
         $apn = new CustomAPNNotification('rider'); // same app bundle id
         foreach ($riders as $rider) {
-            $notifications['tokens'] = $devices[$rider->user_id];
-            $notifications['data'] = [
-                'user_id' => $rider->user_id,
-                'order_id' => $order->id,
-                'rider_id' => $rider->id,
-                'request_id' => $requests->where('rider_id', $rider->id)->first()->id,
-                'title' => $title,
-                'body' => $body,
-                'data' => json_encode($data),
+            $tokens = $devices[$rider->user_id] ?? [];
+            if (empty($tokens)) {
+                continue;
+            }
+            $notifications[] = [
+                'tokens' => $tokens,
+                'data' => [
+                    'user_id' => $rider->user_id,
+                    'order_id' => $order->id,
+                    'rider_id' => $rider->id,
+                    'request_id' => $requests->where('rider_id', $rider->id)->first()->id,
+                    'title' => $title,
+                    'body' => $body,
+                    'data' => json_encode($data),
+                ]
             ];
         }
 

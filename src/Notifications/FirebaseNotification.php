@@ -27,7 +27,7 @@ class FirebaseNotification
     private function getFactory()
     {
         $factory = new Factory();
-
+        $factory->withHttpClientOptions()
         if (app()->environment('testing')) {
             // This is the key to mocking Google Auth. We create an in-memory cache
             // and pre-populate it with a fake, non-expired access token.
@@ -160,5 +160,76 @@ class FirebaseNotification
         }
 
         return $this->fcm->sendAll($messages);
+    }
+}
+
+
+use Kreait\Firebase\Exception\MessagingException;
+use Kreait\Firebase\Factory;
+use Kreait\Firebase\Http\HttpClientOptions;
+use Kreait\Firebase\Messaging\CloudMessage;
+use PHPUnit\Framework\TestCase;
+use WireMock\Client\WireMock;
+
+final class FirebaseMessagingTest extends TestCase
+{
+    private WireMock $wireMock;
+    private $messaging;
+
+    protected function setUp(): void
+    {
+        // Set up the WireMock client and reset stubs
+        $this->wireMock = WireMock::create('localhost', 8080);
+        $this->wireMock->reset();
+
+        // Step 2: Configure kreait/firebase-php using HttpClientOptions
+        $options = HttpClientOptions::default()
+            ->withGuzzleConfigOption('base_uri', 'http://localhost:8080/')
+            ->withGuzzleConfigOption('http_errors', false);
+
+        $factory = (new Factory())
+            ->withServiceAccount(__DIR__.'/test-credentials.json')
+            ->withHttpClientOptions($options);
+
+        $this->messaging = $factory->createMessaging();
+    }
+
+    /** @test */
+    public function it_sends_a_message_successfully(): void
+    {
+        // Define the WireMock stub
+        $this->wireMock->stubFor(WireMock::post(WireMock::urlMatching('/v1/projects/.+/messages:send'))
+            ->willReturn(WireMock::okJson('{
+                "name": "projects/test-project/messages/12345"
+            }')));
+
+        $message = CloudMessage::withTarget('token', 'some_valid_device_token');
+
+        // The method should not throw an exception on success.
+        $this->messaging->send($message);
+        $this->expectNotToPerformAssertions();
+    }
+
+    /** @test */
+    public function it_handles_a_messaging_api_error(): void
+    {
+        $this->expectException(MessagingException::class);
+
+        // Define the WireMock stub for a specific API error response
+        $this->wireMock->stubFor(WireMock::post(WireMock::urlMatching('/v1/projects/.+/messages:send'))
+            ->willReturn(WireMock::aResponse()
+                ->withStatus(404)
+                ->withHeader('Content-Type', 'application/json')
+                ->withBody('{
+                    "error": {
+                        "status": "NOT_FOUND",
+                        "message": "The topic provided does not exist.",
+                        "details": []
+                    }
+                }')));
+
+        $message = CloudMessage::withTarget('topic', 'non-existent-topic');
+
+        $this->messaging->send($message);
     }
 }

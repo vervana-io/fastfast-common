@@ -17,6 +17,10 @@ class FirestoreTestCommandTest extends TestCase
         parent::setUp();
 
         $this->usageExampleMock = $this->mock(FirestoreUsageExample::class);
+        $mockRef = &$this->usageExampleMock;
+        $this->app->bind(FirestoreUsageExample::class, function ($app, $params = []) use (&$mockRef) {
+            return $mockRef;
+        });
     }
 
     /**
@@ -25,10 +29,7 @@ class FirestoreTestCommandTest extends TestCase
     public function test_command_runs_with_all_options(string $option, string $expectedMethod)
     {
         $this->usageExampleMock->shouldReceive($expectedMethod)->once();
-
         Artisan::call('fastfast:firestore-test', ['--example' => $option]);
-
-        $this->app[FirestoreTestCommand::class]->handle($this->app[\FastFast\Common\Firestore\FirestoreClient::class]);
     }
 
     public static function commandOptionProvider(): array
@@ -52,6 +53,7 @@ class FirestoreTestCommandTest extends TestCase
         ];
     }
 }
+
 
 
 

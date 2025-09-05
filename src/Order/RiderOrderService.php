@@ -134,7 +134,7 @@ class RiderOrderService extends OrderService implements FFOrderService
                 'title' => $title,
                 'body' => $body,
                 'event' => 'river_arrived',
-                'channel'
+                'channel' => 'FastFast'
             ]);
         }
         if ($place == 'customer') {

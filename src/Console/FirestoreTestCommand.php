@@ -28,7 +28,7 @@ class FirestoreTestCommand extends Command
     public function handle(FirestoreClient $firestore): int
     {
         $example = $this->option('example');
-        $usageExample = new FirestoreUsageExample($firestore);
+        $usageExample = app(FirestoreUsageExample::class, ['firestore' => $firestore]);
 
         $this->info('Testing Firestore Client...');
         $this->info('Project ID: ' . $firestore->getProjectId());

@@ -1,0 +1,16 @@
+Act as a senior Laravel TDD expert specializing in legacy code.
+
+Your task is to write a complete and exhaustive PHPUnit test for the entire codebase.
+
+**Testing Requirements:**
+1.  **Full Coverage:** Create a separate test method for **every single public method** found in the class.
+2.  **Exhaustive Scenarios:** For each method, write tests for all possible execution paths:
+    * The success case or "happy path."
+    * All failure cases and exception handling.
+    * All conditional branches (`if`/`else`/`switch`).
+    * Edge cases (e.g., null inputs, empty arrays, zero values).
+3.  **Strict Isolation (Unit Tests):** If the class is a Service, Action, Repository, or similar component, mock ALL external dependencies (Models, other Services, Facades, API clients) to ensure it is a true unit test. Do not touch the database.
+4.  **Integration (Feature Tests):** If the class is a Controller, test the full request-response cycle. Use the `RefreshDatabase` trait and model factories to set up any necessary database state.
+5.  **Detailed Assertions:** Add precise assertions to verify every outcome, including return values, state changes, database entries, events dispatched, and exceptions thrown.
+
+Generate the complete test file with the correct namespace, class structure, and all necessary imports and mocks.

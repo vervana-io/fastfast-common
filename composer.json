@@ -20,6 +20,11 @@
       "FastFast\\Common\\": "src/"
     }
   },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
   "authors": [
     {
       "name": "Akeeb Ismail",
@@ -34,6 +39,7 @@
     }
   },
   "require-dev": {
-    "phpunit/phpunit": "^12.3"
+    "phpunit/phpunit": "^10.5 || ^11.0 || ^12.0",
+    "orchestra/testbench": "^8.21"
   }
 }

@@ -59,6 +59,19 @@ class RiderOrderService extends OrderService implements FFOrderService
 
     public function rejected(Order $order, $rider): mixed
     {
+        $customer = $order->customer;
+        $seller = $order->seller;
+        $rider = $order->rider;
+        $title = 'Delivery Rejection';
+        $body = "$rider->full_name has rejected the request to deliver the order $order->reference";
+        $data = [
+            'user_id' => $customer->user_id,
+            'order_id' => $order->id,
+            'title' => $title,
+            'body' => $body
+        ];
+        $users = User::query()->whereIn('id', [$customer->user_id, $seller->user_id])->get();
+        $this->sender->sendAllMessages($users, $data, $title, $body, 'rider_delivery_rejected');
         return $this->approved($order, [$rider->id]);
     }
 
@@ -134,7 +147,6 @@ class RiderOrderService extends OrderService implements FFOrderService
                 'title' => $title,
                 'body' => $body,
                 'event' => 'river_arrived',
-                'channel'
             ]);
         }
         if ($place == 'customer') {

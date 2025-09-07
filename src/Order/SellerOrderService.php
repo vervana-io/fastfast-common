@@ -41,6 +41,22 @@ class SellerOrderService extends OrderService implements FFOrderService
 
     public function approved(Order $order, $exclude = []): mixed
     {
+        $title = 'Order Confirmed';
+        $biz_name = $order->seller->name;
+        $customer = $order->customer;
+        $body = "$biz_name has accepted your order and is now preparing it";
+        $not_data = [
+            'title' => $title,
+            'body' => $body,
+            'order_id' => $order->id,
+            'type' => 'order_accepted',
+        ];
+        $this->sender->sendNotification($customer->user, $not_data, [
+            'title' => $title,
+            'body' => $body,
+            'event' => 'order_approved',
+            'status' => 'approved',
+        ]);
         return $this->sender->sendOrderApprovedNotification($order, $exclude);
     }
 

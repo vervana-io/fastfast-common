@@ -140,7 +140,7 @@ class NotificationSender
                 'reference' => $order->reference,
             ];
             $primary_address = $seller->primary_address;
-            return $this->notifyRiders($order, $order_info, $primary_address, 1000);
+            return $this->notifyRiders($order, $order_info, $primary_address, 1000, $exclude);
 
         }catch (\Exception $e) {
             throw $e;

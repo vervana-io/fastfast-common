@@ -173,7 +173,8 @@ class SellerOrderService extends OrderService implements FFOrderService
         ];
         return $this->sender->sendNotification($rider->user, $main_data, [
             'title' => $title,
-            'body'  => $body
+            'body'  => $body,
+            'event' => 'rider_order_pickup'
         ]);
     }
 

@@ -61,7 +61,7 @@ class RiderOrderService extends OrderService implements FFOrderService
     {
         $customer = $order->customer;
         $seller = $order->seller;
-        $rider = $order->rider;
+        //$rider = $order->rider;
         $title = 'Delivery Rejection';
         $body = "$rider->full_name has rejected the request to deliver the order $order->reference";
         $data = [

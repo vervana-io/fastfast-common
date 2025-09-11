@@ -15,6 +15,7 @@ use FastFast\Common\Notifications\NotificationSender;
 use FastFast\Common\Notifications\PusherNotification;
 use FastFast\Common\Service\FFOrderService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Log;
 use Pusher\ApiErrorException;
 use Pusher\PusherException;
 
@@ -35,6 +36,15 @@ class RiderOrderService extends OrderService implements FFOrderService
             'title' => $title,
             'body' => $body
         ];
+        $meta = [
+            'title' => $title,
+            'body' => $body,
+            'event' => 'customer_pick_up_order',
+        ];
+        $c = $this->sender->sendNotification($customer->user, $data, $meta);
+        $s = $this->sender->sendNotification($seller->user, $data, $meta);
+        Log::info('Customer', $c);
+        Log::info('Seller notification', $s);
         $users = User::query()->whereIn('id', [$customer->user_id, $seller->user_id])->get();
         return $this->sender->sendAllMessages($users, $data, $title, $body, 'rider_delivery_accept');
     }

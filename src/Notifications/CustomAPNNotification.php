@@ -31,7 +31,8 @@ class CustomAPNNotification
       'private_key_path' => config('broadcasting.connections.apn.private_key_path'),
       'production' => match ($user_type) {
         'seller' => true,
-        default => config('broadcasting.connections.apn.production')
+        default => true
+        //default => config('broadcasting.connections.apn.production')
       },
     ];
 

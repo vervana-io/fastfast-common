@@ -36,17 +36,6 @@ class RiderOrderService extends OrderService implements FFOrderService
             'title' => $title,
             'body' => $body
         ];
-        $meta = [
-            'title' => $title,
-            'body' => $body,
-            'event' => 'customer_pick_up_order',
-        ];
-        \Sentry\captureMessage('Sending notifications to customer and seller', \Sentry\Severity::info());
-        $c = $this->sender->sendNotification($customer->user, $data, $meta);
-        $s = $this->sender->sendNotification($seller->user, $data, $meta);
-
-        \Sentry\captureMessage(json_encode(['customer response' => $c]), \Sentry\Severity::info());
-        \Sentry\captureMessage(json_encode(['seller response' => $s]), \Sentry\Severity::info());
         $users = User::query()->whereIn('id', [$customer->user_id, $seller->user_id])->get();
         return $this->sender->sendAllMessages($users, $data, $title, $body, 'rider_delivery_accept');
     }

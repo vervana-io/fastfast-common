@@ -2,6 +2,7 @@
 
 namespace FastFast\Common\Notifications;
 
+use App\Models\Configuration;
 use FastFast\Common\Service\UserDeviceService;
 use App\Models\Notification as Model_Notification;
 use App\Models\Rider;
@@ -79,7 +80,17 @@ class NotificationSender
         return[];
     }
 
-    public function sendOrderApprovedNotification(Order $order, $exclude = [])
+    private function getDistanceRadius()
+    {
+        $distance = 0;
+        $distance_config = Configuration::select('single_value')->where('name', '=', 'rider_search_radius')->first();
+        if(!is_null($distance_config))
+        {
+            $distance = $distance_config->single_value;
+        }
+        return $distance;
+    }
+    public function sendOrderApprovedNotification(Order $order, $exclude = [], $incrementDistance = false)
     {
         try {
             $seller = $order->seller;
@@ -140,7 +151,8 @@ class NotificationSender
                 'reference' => $order->reference,
             ];
             $primary_address = $seller->primary_address;
-            return $this->notifyRiders($order, $order_info, $primary_address, 1000, $exclude);
+            $distance = $this->getDistanceRadius();
+            return $this->notifyRiders($order, $order_info, $primary_address, $distance, $exclude, $incrementDistance);
 
         }catch (\Exception $e) {
             throw $e;
@@ -152,14 +164,14 @@ class NotificationSender
      * @throws PusherException
      * @throws ApiErrorException
      */
-    public function notifyRiders(Order $order, $orderInfo, $primaryAddress, $distance = 5, $exclude = [])
+    public function notifyRiders(Order $order, $orderInfo, $primaryAddress, $distance = 5, $exclude = [], $incrementDistance = false)
     {
         if(!$primaryAddress)
         {
             return false;
         }
         $riders = $this->getNearestRiders($order->seller->id, $primaryAddress->latitude, $primaryAddress->longitude, $distance, $exclude, true);
-        if ($riders->count() < 1) {
+        if ($riders->count() < 1 && $incrementDistance) {
             return $this->notifyRiders($order, $orderInfo, $primaryAddress, $distance + 2, $exclude);
         }
 

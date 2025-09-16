@@ -39,7 +39,7 @@ class SellerOrderService extends OrderService implements FFOrderService
         ]);
     }
 
-    public function approved(Order $order, $exclude = []): mixed
+    public function approved(Order $order, $exclude = [], $incrementDistance = false): mixed
     {
         $title = 'Order Confirmed';
         $biz_name = $order->seller->name;
@@ -57,7 +57,7 @@ class SellerOrderService extends OrderService implements FFOrderService
             'event' => 'order_approved',
             'status' => 'approved',
         ]);
-        return $this->sender->sendOrderApprovedNotification($order, $exclude);
+        return $this->sender->sendOrderApprovedNotification($order, $exclude, $incrementDistance);
     }
 
     public function canceled(Order $order, $transId, $reason): mixed

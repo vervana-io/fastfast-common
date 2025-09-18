@@ -51,13 +51,13 @@ class SellerOrderService extends OrderService implements FFOrderService
             'order_id' => $order->id,
             'type' => 'order_accepted',
         ];
-        $this->sender->sendNotification($customer->user, $not_data, [
+        return $this->sender->sendNotification($customer->user, $not_data, [
             'title' => $title,
             'body' => $body,
             'event' => 'order_approved',
             'status' => 'approved',
         ]);
-        return $this->sender->sendOrderApprovedNotification($order, $exclude, $incrementDistance);
+        //return $this->sender->sendOrderApprovedNotification($order, $exclude, $incrementDistance);
     }
 
     public function canceled(Order $order, $transId, $reason): mixed
@@ -98,8 +98,9 @@ class SellerOrderService extends OrderService implements FFOrderService
             'Seller cannot create an order');
     }
 
-    public function ready(Order $order): mixed
+    public function ready(Order $order, $exclude = [], $incrementDistance = false): mixed
     {
+        return $this->sender->sendOrderApprovedNotification($order,$exclude, $incrementDistance);
         $seller = $order->seller;
         $rider = $order->rider;
         if(!$rider) {

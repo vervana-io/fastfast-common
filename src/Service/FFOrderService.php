@@ -12,14 +12,14 @@ interface FFOrderService
 
     public function verified(Order $order, $transId): mixed;
 
-    public function approved(Order $order, $exclude = []): mixed;
+    public function approved(Order $order,  $exclude = [], $incrementDistance = false): mixed;
 
     public function canceled(Order $order, $transId, $reason): mixed;
 
     public function rejected(Order $order, Rider $rider): mixed;
 
     public function delivered(Order $order): mixed;
-    public function ready(Order $order): mixed;
+    public function ready(Order $order,  $exclude = [], $incrementDistance = false): mixed;
     public function delayed(Order $order, $time): mixed;
     public function accepted(Order $order): mixed;
     public function pickup(Order $order): mixed;

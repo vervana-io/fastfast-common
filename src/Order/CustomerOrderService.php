@@ -103,13 +103,13 @@ class CustomerOrderService implements FFOrderService
         ]);
 
     }
-    public function approved(Order $order, $exclude = []): mixed
+    public function approved(Order $order, $exclude = [], $incrementDistance = false): mixed
     {
         //TODO: handle seller approve other for customer
         return false;
     }
 
-    public function ready(Order $order): mixed
+    public function ready(Order $order, $exclude = [], $incrementDistance = false): mixed
     {
         return false;
     }

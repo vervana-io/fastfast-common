@@ -72,8 +72,8 @@ class RiderOrderService extends OrderService implements FFOrderService
             'body' => $body
         ];
         $users = User::query()->whereIn('id', [$customer->user_id, $seller->user_id])->get();
-        $this->sender->sendAllMessages($users, $data, $title, $body, 'rider_delivery_rejected');
-        return $this->approved($order, [$rider->id]);
+        return $this->sender->sendAllMessages($users, $data, $title, $body, 'rider_delivery_rejected');
+        //return $this->approved($order, [$rider->id]);
     }
 
     public function delivered(Order $order): mixed
@@ -96,7 +96,7 @@ class RiderOrderService extends OrderService implements FFOrderService
     }
 
 
-    public function ready(Order $order): mixed
+    public function ready(Order $order, $exclude = [], $incrementDistance = false): mixed
     {
         throw new \Exception('Rider cannot mark order as ready');
     }
@@ -104,7 +104,7 @@ class RiderOrderService extends OrderService implements FFOrderService
     /**
      * @throws \Exception
      */
-    public function approved(Order $order, $exclude = []): mixed
+    public function approved(Order $order,  $exclude = [], $incrementDistance = false): mixed
     {
         return $this->sender->sendOrderApprovedNotification($order, $exclude);
     }

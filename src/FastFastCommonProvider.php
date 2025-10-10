@@ -2,6 +2,11 @@
 
 namespace FastFast\Common;
 
+use FastFast\Common\Firestore\FirestoreClient;
+use FastFast\Common\Notifications\APNotification;
+use FastFast\Common\Notifications\FirebaseNotification;
+use FastFast\Common\Notifications\NotificationSender;
+use FastFast\Common\Notifications\PusherNotification;
 use Illuminate\Support\ServiceProvider;
 
 class FastFastCommonProvider extends ServiceProvider
@@ -20,6 +25,7 @@ class FastFastCommonProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 \FastFast\Common\Console\StartWorker::class,
+                \FastFast\Common\Console\FirestoreTestCommand::class,
             ]);
         }
     }
@@ -30,30 +36,49 @@ class FastFastCommonProvider extends ServiceProvider
     public function register()
     {
 
-        $this->app->singleton(\Aws\Sqs\SqsClient::class, function ($app) {
+        /*$this->app->singleton(\Aws\Sqs\SqsClient::class, function ($app) {
             $conf = config('consumer.sqs');
             if (config('app.env') == 'local') {
                 $conf['endpoint'] = env('AWS_ENDPOINT', 'http://fake-aws:8080');
             }
             return new \Aws\Sqs\SqsClient($conf);
-        });
+        });*/
 
-        $this->app->singleton(\Aws\Sns\SnsClient::class, function ($app) {
+        /*$this->app->singleton(\Aws\Sns\SnsClient::class, function ($app) {
             $conf = config('consumer.sqs');
             if (config('app.env') == 'local') {
                 $conf['endpoint'] = env('AWS_ENDPOINT', 'http://fake-aws:8080');
             }
             return new \Aws\Sns\SnsClient($conf);
-        });
+        });*/
 
-        $this->app->singleton(\FastFast\Common\Publisher\Publisher::class, function ($app) {
+        /*$this->app->singleton(\FastFast\Common\Publisher\Publisher::class, function ($app) {
             return new \FastFast\Common\Publisher\Publisher($app->make(\Aws\Sns\SnsClient::class),$app->make(\Aws\Sqs\SqsClient::class));
-        });
+        });*/
 
-        $this->app->singleton(\FastFast\Common\Consumer\Consumer::class, function ($app) {
+        /*$this->app->singleton(\FastFast\Common\Consumer\Consumer::class, function ($app) {
             $consumer = new \FastFast\Common\Consumer\Consumer();
             //$consumer->logger = $app->make('log'); // inject Laravel logger
             return $consumer;
+        });*/
+
+
+        $this->app->singleton(\FastFast\Common\Firestore\FirestoreClient::class, function ($app) {
+            $projectId = config('firebase.firestore.project_id');
+            $apiKey = config('firebase.firestore.apiKey');
+            $database = config('firebase.firestore.database', '(default)');
+            
+            if (empty($projectId) || empty($apiKey)) {
+                throw new \InvalidArgumentException('Firebase Firestore configuration is missing. Please set firebase.firestore.project_id and firebase.firestore.apikey in your config.');
+            }
+            
+            return new \FastFast\Common\Firestore\FirestoreClient($projectId, $apiKey, $database);
+        });
+        $this->app->singleton(NotificationSender::class, function ($app) {
+            return new NotificationSender(
+                $app->make(FirestoreClient::class),
+                $app->make(PusherNotification::class),
+                $app->make(FirebaseNotification::class),$app->make(APNotification::class));
         });
     }
 }

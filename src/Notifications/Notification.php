@@ -2,6 +2,7 @@
 
 namespace FastFast\Common\Notifications;
 
+use Exception;
 use App\Models\Admin;
 use App\Models\Notification as Model_Notification;
 use App\Models\Order;
@@ -9,27 +10,66 @@ use App\Models\Personnel;
 use App\Models\User;
 use App\Notifications\OrderStatusNotification;
 use Carbon\Carbon;
+use GuzzleHttp\Exception\GuzzleException;
+use FastFast\Common\Firestore\FirestoreClient;
 use FastFast\Common\Publisher\PublisherInterface;
 use Kreait\Firebase\Exception\FirebaseException;
 use Kreait\Firebase\Exception\MessagingException;
 use Kreait\Firebase\Factory;
 use Kreait\Firebase\Messaging;
 use Kreait\Firebase\Messaging\CloudMessage;
+use Pusher\ApiErrorException;
 use Pusher\Pusher;
+use Pusher\PusherException;
 use Pusher\PushNotifications\PushNotifications;
 use React\Promise\Deferred;
 use function React\Promise\all;
 
 class Notification {
 
-    public function __construct(private PublisherInterface $publisher)
+    /**
+     * @throws PusherException
+     * @throws ApiErrorException
+     * @throws GuzzleException
+     */
+    public function sendBatchPusher(array $batch)
     {
+        return $this->getPusherInstance()->triggerBatch($batch);
     }
 
+    /**
+     * @throws MessagingException
+     * @throws FirebaseException
+     */
+    public function sendAllFireBaseMessage($data, $title, $body)
+    {
+        $fcm = $this->getFirebaseInstance();
+        $notification = $this->generateFirebaseNotification($title, $body);
+        $messages = [];
+        foreach ($data as $item) {
+            $cm = CloudMessage::new()->withData($item['data'])->withNotification($notification);
+            foreach ($item['tokens'] as $token) {
+                $messages[] = $cm->toToken($token);
+            }
+        }
+        $fcm->sendAll($messages)->validTokens();
+    }
+
+    /**
+     * @throws Exception
+     */
     public function sendUserAPNS($data, User $user, $type = 'customer')
     {
         $client = new CustomAPNNotification($type);
         return $client->sendNotification($user, $data);
+    }
+
+    public function sendToFirestore($collection, $docs)
+    {
+        $store = app(FirestoreClient::class);
+
+        return $store->addMultipleDocuments($collection,$docs);
+
     }
 
     private function getFirebaseInstance()
@@ -269,7 +309,7 @@ class Notification {
                 ], 'device');
             }
         }
-        if ($user && $user->device_type == 'ios') {
+        if ($user && $user->device_token && $user->device_type == 'ios') {
             //return $user->notify(new OrderStatusNotification($status, $data));
             $type = $user->user_type == 1 ? 'customer' : ($user->user_type == 3 ? 'rider' : 'seller');
             //return $this->sendUserAPNS($data, $user, $type);
@@ -289,6 +329,8 @@ class Notification {
 
             if (count($device_tokens) > 0) {
                 $device_token = $device_tokens[0];
+                $notification = $this->generateFirebaseNotification($title, $body);
+                $message = CloudMessage::new()->toToken($device_token)->withNotification($notification);
                 $this->publishToNotificationService([
                     'to' => [$device_token],
                     'message' => [
@@ -329,6 +371,11 @@ class Notification {
             //$this->send_beam_message([$seller_beam_device_token], $title, $body, $not_data);
 
             $this->sendBeamMessage([$seller_beam_device_token], $title, $body, $data);
+        }
+        if ($event == 'rider_new_order') { // for rider notification issues
+            $data = [
+                'order' => $data
+            ];
         }
         $this->sendPusherMessage($event, $data, $channel);
         return true;

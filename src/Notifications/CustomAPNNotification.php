@@ -31,9 +31,13 @@ class CustomAPNNotification
       'private_key_path' => config('broadcasting.connections.apn.private_key_path'),
       'production' => match ($user_type) {
         'seller' => true,
-        default => config('broadcasting.connections.apn.production')
+        default => true
+        //default => config('broadcasting.connections.apn.production')
       },
     ];
+
+      $authProvider = AuthProvider\Token::create($this->options);
+      $this->client = new Client($authProvider, $this->options['production']);
   }
 
     /**
@@ -42,6 +46,9 @@ class CustomAPNNotification
      */
     public function sendNotification(User $user, $data = [])
   {
+      if (!$user->device_token) {
+          return [];
+      }
     $authProvider = AuthProvider\Token::create($this->options);
     $client = new Client($authProvider, $this->options['production']);
 
@@ -62,7 +69,7 @@ class CustomAPNNotification
   }
 
 
-  public function sendMultiDeviceNotification($deviceTokens, $data)
+  public function sendMultiDeviceNotification($deviceTokens, $data): array
   {
       $authProvider = AuthProvider\Token::create($this->options);
       $client = new Client($authProvider, $this->options['production']);
@@ -80,7 +87,28 @@ class CustomAPNNotification
       foreach ($deviceTokens as $token) {
           $notification = new Notification($payload, $token);
           $client->addNotification($notification);
-          $client->push();
       }
+      return $client->push();
+  }
+
+  public function sendMultiMessages($messages, $meta)
+  {
+      $alert = Alert::create()
+          ->setTitle($meta['title'])
+          ->setBody($meta['body']);
+
+      $payload = Payload::create()
+          ->setAlert($alert);
+      $payload->setSound('default');
+
+      $payload->setCustomValue('type', $meta['title']);
+      foreach ($messages as $message) {
+          $payload->setCustomValue('data', $message['data']);
+          foreach ($message['tokens'] as $token) {
+              $this->client->addNotification(new Notification($payload, $token));
+          }
+      }
+
+      return $this->client->push();
   }
 }

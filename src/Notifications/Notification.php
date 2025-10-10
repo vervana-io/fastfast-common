@@ -2,6 +2,7 @@
 
 namespace FastFast\Common\Notifications;
 
+use Exception;
 use App\Models\Admin;
 use App\Models\Notification as Model_Notification;
 use App\Models\Order;
@@ -9,19 +10,53 @@ use App\Models\Personnel;
 use App\Models\User;
 use App\Notifications\OrderStatusNotification;
 use Carbon\Carbon;
+use GuzzleHttp\Exception\GuzzleException;
 use FastFast\Common\Firestore\FirestoreClient;
 use Kreait\Firebase\Exception\FirebaseException;
 use Kreait\Firebase\Exception\MessagingException;
 use Kreait\Firebase\Factory;
 use Kreait\Firebase\Messaging;
 use Kreait\Firebase\Messaging\CloudMessage;
+use Pusher\ApiErrorException;
 use Pusher\Pusher;
+use Pusher\PusherException;
 use Pusher\PushNotifications\PushNotifications;
 use React\Promise\Deferred;
 use function React\Promise\all;
 
 class Notification {
 
+    /**
+     * @throws PusherException
+     * @throws ApiErrorException
+     * @throws GuzzleException
+     */
+    public function sendBatchPusher(array $batch)
+    {
+        return $this->getPusherInstance()->triggerBatch($batch);
+    }
+
+    /**
+     * @throws MessagingException
+     * @throws FirebaseException
+     */
+    public function sendAllFireBaseMessage($data, $title, $body)
+    {
+        $fcm = $this->getFirebaseInstance();
+        $notification = $this->generateFirebaseNotification($title, $body);
+        $messages = [];
+        foreach ($data as $item) {
+            $cm = CloudMessage::new()->withData($item['data'])->withNotification($notification);
+            foreach ($item['tokens'] as $token) {
+                $messages[] = $cm->toToken($token);
+            }
+        }
+        $fcm->sendAll($messages)->validTokens();
+    }
+
+    /**
+     * @throws Exception
+     */
     public function sendUserAPNS($data, User $user, $type = 'customer')
     {
         $client = new CustomAPNNotification($type);

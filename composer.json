@@ -11,7 +11,9 @@
     "symfony/property-access": "^7.3",
     "aws/aws-sdk-php": "^3.349",
     "illuminate/console": "^10.48",
-    "bensontrent/firestore-php": "^3.1"
+    "kreait/firebase-php": "^7.21",
+    "pusher/pusher-php-server": "^7.2",
+    "edamov/pushok": "^0.18.1"
   },
   "autoload": {
     "psr-4": {
@@ -30,5 +32,8 @@
         "FastFast\\Common\\FastFastCommonProvider"
       ]
     }
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^12.3"
   }
 }

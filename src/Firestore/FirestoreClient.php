@@ -230,6 +230,33 @@ class FirestoreClient
         return $results;
     }
 
+    public function addRiderOrderDocuments($order, $riders, $requests, $data, $metadata, $collection = 'rider_orders')
+    {
+        $promises = [];
+        $results = [];
+        foreach ($riders as $rider) {
+            $url = "{$this->baseUrl}/{$collection}?key={$this->apiKey}";
+            $doc = [
+                'title' => $metadata['title'],
+                'body' => $metadata['body'],
+                'order_id' => $order->id,
+                'rider_id' => $rider->id,
+                'request_id' => $requests->where('rider_id', $rider->id)->first()->id,
+                'data' => $data
+            ];
+            $document = [
+                'fields' => $this->formatForFirestore($doc)
+            ];
+            $promises[$rider->id] = $this->httpClient->requestAsync('POST', $url, [
+                'json' => $document
+            ]);
+        }
+
+
+        // Process promises with concurrency limit
+        return Promise\Utils::settle($promises)->wait();
+    }
+
     /**
      * Add multiple documents to Firestore using async approach
      *

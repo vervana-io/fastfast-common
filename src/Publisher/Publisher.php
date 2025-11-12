@@ -40,4 +40,26 @@ class Publisher implements PublisherInterface
         ];
         return $this->sqsClient->sendMessage($params);
     }
+
+    public function produceBatch(array $entries, $qUrl)
+    {
+        // Expecting entries to be an array of AWS SQS SendMessageBatchRequestEntry items
+        // with keys: Id, MessageBody, MessageAttributes (optional), MessageGroupId (for FIFO).
+        // We'll JSON-encode any associative arrays passed as MessageBody automatically.
+        $normalized = [];
+        foreach ($entries as $entry) {
+            $normalized[] = [
+                'Id' => $entry['Id'] ?? uniqid('msg_', true),
+                'MessageBody' => is_string($entry['MessageBody']) ? $entry['MessageBody'] : json_encode($entry['MessageBody']),
+                'MessageAttributes' => $entry['MessageAttributes'] ?? [],
+                // MessageGroupId is required for FIFO queues; if using standard queues it will be ignored
+                'MessageGroupId' => $entry['MessageGroupId'] ?? 'notification-group-id',
+            ];
+        }
+
+        return $this->sqsClient->sendMessageBatch([
+            'QueueUrl' => $qUrl,
+            'Entries' => $normalized,
+        ]);
+    }
 }

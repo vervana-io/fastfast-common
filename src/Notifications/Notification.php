@@ -27,6 +27,10 @@ use function React\Promise\all;
 
 class Notification {
 
+    public function __construct(private PublisherInterface $publisher)
+    {
+    }
+
     /**
      * @throws PusherException
      * @throws ApiErrorException

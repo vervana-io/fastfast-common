@@ -3,6 +3,7 @@
 namespace FastFast\Common\Notifications;
 
 use App\Models\Configuration;
+use FastFast\Common\Publisher\PublisherInterface;
 use FastFast\Common\Service\UserDeviceService;
 use App\Models\Notification as Model_Notification;
 use App\Models\Rider;
@@ -25,11 +26,58 @@ class NotificationSender
         private PusherNotification $pusher,
         private FirebaseNotification $fcm,
         private APNotification $apns,
+        private PublisherInterface $publisher,
     )
     {
         $this->deviceService = new UserDeviceService();
     }
 
+    public function publishToNotificationService($data, $pattern = 'notification', $messageId = 'notification-group-id')
+    {
+        return $this->publisher->produce($data, $this->getNotificationQueueUrl(), [
+            'pattern' => [
+                'DataType' => 'String',
+                'StringValue' => $pattern,
+            ],
+        ], $messageId);
+    }
+
+    private function publishBatchToNotificationService(array $entries)
+    {
+        return $this->publisher->produceBatch($entries, $this->getNotificationQueueUrl());
+    }
+
+    private function getNotificationQueueUrl(): string
+    {
+        // Priority: consumer.notification_queue_url -> services.notification -> consumer.queue_url
+        return config('consumer.notification_queue_url')
+            ?? config('services.notification')
+            ?? config('consumer.queue_url');
+    }
+
+    private function shouldRouteViaSqs(): bool
+    {
+        return (bool) (config('consumer.route_notifications_via_sqs') ?? false);
+    }
+
+    private function buildBatchEntriesForChannels(array $channelPayloads, string $groupId = 'notification-group-id'): array
+    {
+        $entries = [];
+        foreach ($channelPayloads as $pattern => $payload) {
+            $entries[] = [
+                'Id' => $pattern . '-' . uniqid(),
+                'MessageBody' => $payload,
+                'MessageAttributes' => [
+                    'pattern' => [
+                        'DataType' => 'String',
+                        'StringValue' => $pattern,
+                    ],
+                ],
+                'MessageGroupId' => $groupId,
+            ];
+        }
+        return $entries;
+    }
     public function createNotification($data)
     {
         return Model_Notification::create($data);
@@ -47,6 +95,61 @@ class NotificationSender
         $results = [];
         $devices = $this->deviceService->getTokens($user);
         $tokens = $devices['tokens'];
+
+        if ($this->shouldRouteViaSqs()) {
+            $channelPayloads = [];
+            if (isset($tokens['android']) && count($tokens['android']) > 0) {
+                $channelPayloads['firebase'] = [
+                    'to' => $tokens['android'],
+                    'message' => [
+                        'title' => $title,
+                        'body' => $body,
+                        'data' => $data,
+                    ],
+                ];
+            }
+            if (isset($tokens['ios']) && count($tokens['ios']) > 0) {
+                $channelPayloads['apns'] = [
+                    'to' => $tokens['ios'],
+                    'type' => $devices['type'] ?? 'customer',
+                    'message' => [
+                        'title' => $title,
+                        'body' => $body,
+                        'data' => $data,
+                    ],
+                ];
+            }
+            // Pusher event
+            $channelPayloads['pusher'] = [
+                'to' => $metadata['channel'] ?? 'FastFast',
+                'event' => $metadata['event'] ?? 'notification',
+                'message' => $data,
+            ];
+            // Optional email/SMS if available on user model
+            if (!empty($user->email)) {
+                $channelPayloads['email'] = [
+                    'to' => [$user->email],
+                    'message' => [
+                        'subject' => $title,
+                        'body' => $body,
+                        'data' => $data,
+                    ],
+                ];
+            }
+            if (!empty($user->phone)) {
+                $channelPayloads['sms'] = [
+                    'to' => [$user->phone],
+                    'message' => [
+                        'body' => $body,
+                        'data' => $data,
+                    ],
+                ];
+            }
+
+            $entries = $this->buildBatchEntriesForChannels($channelPayloads);
+            return $this->publishBatchToNotificationService($entries);
+        }
+
         if (isset($tokens['android'])) {
             $results['fcm'] = $this->fcm->sendToTokens($tokens['android'], $data, $title, $body);
         }
@@ -73,6 +176,36 @@ class NotificationSender
             return count($device['tokens']) > 0;
         })->values()->toArray();
 
+        if ($this->shouldRouteViaSqs()) {
+            $channelPayloads = [];
+            if (!empty($fcmDevices)) {
+                $channelPayloads['firebase'] = [
+                    'devices' => $fcmDevices,
+                    'message' => [
+                        'title' => $title,
+                        'body' => $body,
+                        'data' => $data,
+                    ],
+                ];
+            }
+            if (!empty($apnDevices)) {
+                $channelPayloads['apns'] = [
+                    'devices' => $apnDevices,
+                    'message' => [
+                        'title' => $title,
+                        'body' => $body,
+                        'data' => $data,
+                    ],
+                ];
+            }
+            $channelPayloads['pusher'] = [
+                'event' => $event,
+                'message' => $data,
+            ];
+            $entries = $this->buildBatchEntriesForChannels($channelPayloads);
+            $this->publishBatchToNotificationService($entries);
+            return [];
+        }
 
         $this->fcm->sendUserMessage($fcmDevices, $data, $title, $body);
         $this->apns->push($apnDevices, $data, $title, $body);

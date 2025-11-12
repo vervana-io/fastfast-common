@@ -7,6 +7,10 @@ use FastFast\Common\Notifications\APNotification;
 use FastFast\Common\Notifications\FirebaseNotification;
 use FastFast\Common\Notifications\NotificationSender;
 use FastFast\Common\Notifications\PusherNotification;
+use FastFast\Common\Publisher\Publisher;
+use FastFast\Common\Publisher\PublisherInterface;
+use Aws\Sqs\SqsClient;
+use Aws\Sns\SnsClient;
 use Illuminate\Support\ServiceProvider;
 
 class FastFastCommonProvider extends ServiceProvider
@@ -36,31 +40,27 @@ class FastFastCommonProvider extends ServiceProvider
     public function register()
     {
 
-        /*$this->app->singleton(\Aws\Sqs\SqsClient::class, function ($app) {
+        $this->app->singleton(SqsClient::class, function ($app) {
             $conf = config('consumer.sqs');
             if (config('app.env') == 'local') {
-                $conf['endpoint'] = env('AWS_ENDPOINT', 'http://fake-aws:8080');
+                $conf['endpoint'] = env('AWS_ENDPOINT', 'http://localstack:4566');
             }
-            return new \Aws\Sqs\SqsClient($conf);
-        });*/
+            return new SqsClient($conf);
+        });
 
-        /*$this->app->singleton(\Aws\Sns\SnsClient::class, function ($app) {
-            $conf = config('consumer.sqs');
+        $this->app->singleton(SnsClient::class, function ($app) {
+            $conf = config('consumer.sns');
             if (config('app.env') == 'local') {
-                $conf['endpoint'] = env('AWS_ENDPOINT', 'http://fake-aws:8080');
+                $conf['endpoint'] = env('AWS_ENDPOINT', 'http://localstack:4566');
             }
-            return new \Aws\Sns\SnsClient($conf);
-        });*/
+            return new SnsClient($conf);
+        });
 
-        /*$this->app->singleton(\FastFast\Common\Publisher\Publisher::class, function ($app) {
-            return new \FastFast\Common\Publisher\Publisher($app->make(\Aws\Sns\SnsClient::class),$app->make(\Aws\Sqs\SqsClient::class));
-        });*/
+        $this->app->singleton(Publisher::class, function ($app) {
+            return new Publisher($app->make(SnsClient::class), $app->make(SqsClient::class));
+        });
 
-        /*$this->app->singleton(\FastFast\Common\Consumer\Consumer::class, function ($app) {
-            $consumer = new \FastFast\Common\Consumer\Consumer();
-            //$consumer->logger = $app->make('log'); // inject Laravel logger
-            return $consumer;
-        });*/
+        $this->app->bind(PublisherInterface::class, Publisher::class);
 
 
         $this->app->singleton(\FastFast\Common\Firestore\FirestoreClient::class, function ($app) {
@@ -78,7 +78,10 @@ class FastFastCommonProvider extends ServiceProvider
             return new NotificationSender(
                 $app->make(FirestoreClient::class),
                 $app->make(PusherNotification::class),
-                $app->make(FirebaseNotification::class),$app->make(APNotification::class));
+                $app->make(FirebaseNotification::class),
+                $app->make(APNotification::class),
+                $app->make(PublisherInterface::class)
+            );
         });
     }
 }

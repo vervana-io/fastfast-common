@@ -10,6 +10,11 @@ return [
         ],
     ],
     'queue_url' => env('AWS_SQS_QUEUE_URL'),
+    // Optional override for the dedicated Notification Service queue.
+    // If not provided, services.notification or queue_url will be used.
+    'notification_queue_url' => env('NOTIFICATION_SQS_QUEUE_URL'),
+    // When true, NotificationSender will route channel sends via SQS batch to the Notification Service
+    'route_notifications_via_sqs' => env('ROUTE_NOTIFICATIONS_VIA_SQS', false),
     'sns' => [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
         'version' => 'latest',

@@ -253,6 +253,7 @@ class NotificationSender
             $builder->selectRaw("$haversine AS distance")->havingRaw("distance < ?", [$distance])->orderBy('distance');
         })->where('status', '=', 1)
             ->whereNotIn('id', $excludes)
+            ->limit(5)
             ->get();
     }
 }

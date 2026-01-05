@@ -24,7 +24,7 @@ class FastFastCommonProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
-                \FastFast\Common\Console\StartWorker::class,
+                //\FastFast\Common\Console\StartWorker::class,
                 \FastFast\Common\Console\FirestoreTestCommand::class,
             ]);
         }

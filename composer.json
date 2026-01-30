@@ -5,12 +5,12 @@
   "require": {
 
     "php": "^8.1",
-    "illuminate/support": "^10.10",
+    "illuminate/support": "^10 || ^11 || ^12",
     "react/event-loop": "^1.5",
     "react/promise": "^3.2",
     "symfony/property-access": "^7.3",
     "aws/aws-sdk-php": "^3.349",
-    "illuminate/console": "^10.48",
+    "illuminate/console": "^10 || ^11 || ^12",
     "kreait/firebase-php": "^7.21",
     "pusher/pusher-php-server": "^7.2",
     "edamov/pushok": "^0.18.1"
